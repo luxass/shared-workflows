@@ -1,0 +1,72 @@
+name: "Setup"
+description: "Checkout, setup pnpm, setup Node.js, and install dependencies"
+
+inputs:
+  # checkout inputs
+  token:
+    description: "GitHub token to use for checkout (defaults to GITHUB_TOKEN)"
+    default: ${{ github.token }}
+    required: false
+  persist-credentials:
+    description: "Whether to persist git credentials after checkout"
+    default: "false"
+    required: false
+  fetch-depth:
+    description: "Number of commits to fetch (0 for full history)"
+    default: "1"
+    required: false
+  submodules:
+    description: "Whether to checkout submodules: `true` to checkout submodules or `recursive` to recursively checkout submodules"
+    default: "false"
+    required: false
+
+  # node inputs
+  node-version:
+    description: "Node.js version to use"
+    default: "lts/*"
+    required: false
+  node-version-file:
+    description: "File containing the version spec (e.g. .nvmrc, .node-version, package.json)"
+    default: ""
+    required: false
+  registry-url:
+    description: "Registry URL to configure for authentication (e.g. https://npm.pkg.github.com)"
+    default: ""
+    required: false
+  scope:
+    description: "Scope for authenticating against scoped registries (e.g. @myorg)"
+    default: ""
+    required: false
+
+  # install inputs
+  install-args:
+    description: "Additional arguments to pass to pnpm install"
+    default: ""
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        token: ${{ inputs.token }}
+        persist-credentials: ${{ inputs.persist-credentials }}
+        fetch-depth: ${{ inputs.fetch-depth }}
+        submodules: ${{ inputs.submodules }}
+
+    - name: setup pnpm
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+    - name: setup node
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        node-version-file: ${{ inputs.node-version-file }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+
+    - name: install dependencies
+      shell: bash
+      env:
+        INSTALL_ARGS: ${{ inputs.install-args }}
+      run: pnpm install --frozen-lockfile $INSTALL_ARGS
