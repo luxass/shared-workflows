@@ -43,15 +43,15 @@ jobs:
           persist-credentials: ${{ inputs.persist-credentials }}
           fetch-depth: ${{ inputs.fetch-depth }}
 
-      - uses: taiki-e/install-action@0cccd59f03b32c54f0db097c518c320bfc8c73b3 # v2.71.1
-        with:
-          tool: zizmor@${{ inputs.zizmor-version }}
+      - name: install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
 
       - name: run zizmor
         env:
           GH_TOKEN: ${{ secrets.token || github.token }}
           ZIZMOR_ARGS: ${{ inputs.zizmor-args }}
-        run: zizmor --format sarif $ZIZMOR_ARGS . > results.sarif
+          ZIZMOR_VERSION: ${{ inputs.zizmor-version }}
+        run: uvx zizmor@$ZIZMOR_VERSION $ZIZMOR_ARGS --format sarif . > results.sarif
 
       - name: upload sarif file
         uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
