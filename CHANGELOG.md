@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/luxass/shared-workflows/compare/v0.3.1...v0.3.2) (2026-04-02)
+
+
+### Bug Fixes
+
+* **ci-security:** update ci-security workflow and add default config ([7c64c54](https://github.com/luxass/shared-workflows/commit/7c64c543d5ff2f921205aa4e4b55f2de27362d58))
+
 ## [0.3.1](https://github.com/luxass/shared-workflows/compare/v0.3.0...v0.3.1) (2026-04-02)
 
 
