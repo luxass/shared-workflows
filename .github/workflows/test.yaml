@@ -43,6 +43,11 @@ on:
         type: string
         default: ""
         required: false
+      test-script:
+        description: "Arguments passed to pnpm for the test step"
+        type: string
+        default: "test"
+        required: false
     secrets:
       token:
         description: "GitHub token to use for checkout (defaults to GITHUB_TOKEN)"
@@ -70,4 +75,6 @@ jobs:
           install-args: ${{ inputs.install-args }}
 
       - name: test
-        run: pnpm test
+        env:
+          TEST_SCRIPT: ${{ inputs.test-script }}
+        run: pnpm $TEST_SCRIPT
