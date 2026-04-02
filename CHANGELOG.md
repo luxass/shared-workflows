@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/luxass/shared-workflows/compare/v0.1.0...v0.2.0) (2026-04-02)
+
+
+### Features
+
+* add customizable test script to test workflow ([588da1f](https://github.com/luxass/shared-workflows/commit/588da1f262c1b90926de98ac3b660787d2182896))
+
+
+### Miscellaneous Chores
+
+* update installation method for zizmor ([6c6046a](https://github.com/luxass/shared-workflows/commit/6c6046a2a0472128762422fe42d33b25fad71279))
+
 ## 0.1.0 (2026-04-02)
 
 
