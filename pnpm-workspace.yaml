@@ -1,0 +1,4 @@
+onlyBuiltDependencies: []
+ignoreScripts: true
+minimumReleaseAge: 5760
+catalogMode: prefer

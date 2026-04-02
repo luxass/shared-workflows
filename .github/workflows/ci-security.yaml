@@ -1,0 +1,60 @@
+name: GitHub Actions Security Analysis
+
+on:
+  workflow_call:
+    inputs:
+      persist-credentials:
+        description: "Whether to persist git credentials after checkout"
+        type: boolean
+        default: false
+        required: false
+      fetch-depth:
+        description: "Number of commits to fetch (0 for full history)"
+        type: number
+        default: 1
+        required: false
+      zizmor-version:
+        description: "Version of zizmor to install"
+        type: string
+        default: "latest"
+        required: false
+      zizmor-args:
+        description: "Additional arguments to pass to zizmor"
+        type: string
+        default: ""
+        required: false
+    secrets:
+      token:
+        description: "GitHub token for zizmor to use for API calls (defaults to GITHUB_TOKEN)"
+        required: false
+
+permissions: {}
+
+jobs:
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: ${{ inputs.persist-credentials }}
+          fetch-depth: ${{ inputs.fetch-depth }}
+
+      - uses: taiki-e/install-action@0cccd59f03b32c54f0db097c518c320bfc8c73b3 # v2.71.1
+        with:
+          tool: zizmor@${{ inputs.zizmor-version }}
+
+      - name: run zizmor
+        env:
+          GH_TOKEN: ${{ secrets.token || github.token }}
+          ZIZMOR_ARGS: ${{ inputs.zizmor-args }}
+        run: zizmor --format sarif $ZIZMOR_ARGS . > results.sarif
+
+      - name: upload sarif file
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
+        with:
+          sarif_file: results.sarif
+          category: zizmor

@@ -1,0 +1,73 @@
+name: Test
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        type: string
+        default: "lts/*"
+        required: false
+      persist-credentials:
+        description: "Whether to persist git credentials after checkout"
+        type: boolean
+        default: false
+        required: false
+      fetch-depth:
+        description: "Number of commits to fetch (0 for full history)"
+        type: number
+        default: 1
+        required: false
+      submodules:
+        description: "Whether to checkout submodules: `true` to checkout submodules or `recursive` to recursively checkout submodules"
+        type: string
+        default: "false"
+        required: false
+      node-version-file:
+        description: "File containing the version spec (e.g. .nvmrc, .node-version, package.json)"
+        type: string
+        default: ""
+        required: false
+      registry-url:
+        description: "Registry URL to configure for authentication (e.g. https://npm.pkg.github.com)"
+        type: string
+        default: ""
+        required: false
+      scope:
+        description: "Scope for authenticating against scoped registries (e.g. @myorg)"
+        type: string
+        default: ""
+        required: false
+      install-args:
+        description: "Additional arguments to pass to pnpm install"
+        type: string
+        default: ""
+        required: false
+    secrets:
+      token:
+        description: "GitHub token to use for checkout (defaults to GITHUB_TOKEN)"
+        required: false
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: setup
+        uses: luxass/shared-workflows/actions/setup@v0.0.0 # x-release-please-version
+        with:
+          node-version: ${{ inputs.node-version }}
+          node-version-file: ${{ inputs.node-version-file }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          token: ${{ secrets.token || github.token }}
+          persist-credentials: ${{ inputs.persist-credentials }}
+          fetch-depth: ${{ inputs.fetch-depth }}
+          submodules: ${{ inputs.submodules }}
+          install-args: ${{ inputs.install-args }}
+
+      - name: test
+        run: pnpm test

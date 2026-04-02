@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-v-in-tag": true,
+  "draft-pull-request": true,
+  "changelog-sections": [
+    { "section": "Features", "type": "feat" },
+    { "section": "Bug Fixes", "type": "fix" },
+    { "section": "Dependencies", "type": "deps" },
+    { "section": "Documentation", "type": "docs" },
+    { "section": "Miscellaneous Chores", "type": "chore" }
+  ],
+  "packages": {
+    ".": {
+      "package-name": "shared-workflows",
+      "initial-version": "0.1.0",
+      "extra-files": [
+        ".github/workflows/ci.yaml",
+        ".github/workflows/test.yaml",
+        "examples/ci.yaml",
+        "examples/test.yaml",
+        "examples/ci-security.yaml"
+      ]
+    }
+  }
+}
