@@ -3,6 +3,7 @@
   "release-type": "node",
   "include-v-in-tag": true,
   "include-component-in-tag": false,
+  "tag-separator": "/",
   "draft-pull-request": true,
   "separate-pull-requests": true,
   "changelog-sections": [
@@ -24,7 +25,7 @@
       ]
     },
     "actions/setup": {
-      "package-name": "shared-workflows-setup",
+      "component": "actions/setup",
       "initial-version": "0.1.0",
       "include-component-in-tag": true
     }
