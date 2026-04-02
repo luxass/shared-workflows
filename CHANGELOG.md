@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/luxass/shared-workflows/compare/v0.3.0...v0.3.1) (2026-04-02)
+
+
+### Bug Fixes
+
+* disable uv cache in ci-security to prevent dependency glob warning ([5af66f3](https://github.com/luxass/shared-workflows/commit/5af66f3dbca886165d8ff58b539862358a1a5d34))
+
 ## [0.3.0](https://github.com/luxass/shared-workflows/compare/v0.2.0...v0.3.0) (2026-04-02)
 
 
