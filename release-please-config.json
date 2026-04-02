@@ -4,6 +4,7 @@
   "include-v-in-tag": true,
   "include-component-in-tag": false,
   "draft-pull-request": true,
+  "separate-pull-requests": true,
   "changelog-sections": [
     { "section": "Features", "type": "feat" },
     { "section": "Bug Fixes", "type": "fix" },
@@ -15,13 +16,17 @@
     ".": {
       "package-name": "shared-workflows",
       "initial-version": "0.1.0",
+      "include-component-in-tag": false,
       "extra-files": [
-        { "type": "generic", "path": ".github/workflows/ci.yaml" },
-        { "type": "generic", "path": ".github/workflows/test.yaml" },
         { "type": "generic", "path": "examples/ci.yaml" },
         { "type": "generic", "path": "examples/test.yaml" },
         { "type": "generic", "path": "examples/ci-security.yaml" }
       ]
+    },
+    "actions/setup": {
+      "package-name": "shared-workflows-setup",
+      "initial-version": "0.1.0",
+      "include-component-in-tag": true
     }
   }
 }

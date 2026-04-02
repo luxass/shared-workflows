@@ -1,0 +1,111 @@
+name: Update Action References
+
+on:
+  push:
+    tags:
+      - "actions/setup/v*"
+
+permissions: {}
+
+concurrency:
+  group: update-action-refs
+  cancel-in-progress: true
+
+jobs:
+  update-refs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    if: github.repository == 'luxass/shared-workflows'
+    environment:
+      name: release
+      deployment: false
+    steps:
+      - name: generate token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+
+      - name: resolve tag
+        id: resolve
+        env:
+          TAG_REF: ${{ github.ref_name }}
+          TAG_SHA: ${{ github.sha }}
+        run: |
+          echo "tag=${TAG_REF}" >> "$GITHUB_OUTPUT"
+          echo "sha=${TAG_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: find and update workflow references
+        id: update
+        env:
+          NEW_SHA: ${{ steps.resolve.outputs.sha }}
+          NEW_TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          FILES=$(grep -rl "uses: luxass/shared-workflows/actions/setup@" .github/workflows/ --exclude="update-action-refs.yaml" || true)
+
+          if [ -z "$FILES" ]; then
+            echo "No workflow files reference actions/setup"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+          for file in $FILES; do
+            sed -i "s|uses: luxass/shared-workflows/actions/setup@[a-f0-9]\{40\}.*|uses: luxass/shared-workflows/actions/setup@${NEW_SHA} # ${NEW_TAG}|" "$file"
+          done
+
+          {
+            echo "files<<FILES_EOF"
+            echo "$FILES"
+            echo "FILES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: generate diff
+        if: steps.update.outputs.changed == 'true'
+        id: diff
+        run: |
+          DIFF=$(git diff .github/workflows/)
+          {
+            echo "content<<DIFF_EOF"
+            echo "$DIFF"
+            echo "DIFF_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: create pull request
+        if: steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+          DIFF: ${{ steps.diff.outputs.content }}
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          commit-message: "chore(deps): update actions/setup to ${{ steps.resolve.outputs.tag }}"
+          title: "chore(deps): update actions/setup to ${{ steps.resolve.outputs.tag }}"
+          body: |
+            Updates `actions/setup` references to SHA-pinned [`${{ env.TAG }}`](https://github.com/${{ github.repository }}/tree/${{ env.TAG }}).
+
+            |         |                  |
+            | ------- | ---------------- |
+            | **Tag** | `${{ env.TAG }}` |
+            | **SHA** | `${{ env.SHA }}` |
+
+            ### Changes
+
+            ```diff
+            ${{ env.DIFF }}
+            ```
+          branch: "chore/update-action-refs"
+          add-paths: .github/workflows/
+          base: main
+          committer: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          author: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"

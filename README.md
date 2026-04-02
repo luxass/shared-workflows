@@ -38,6 +38,10 @@ See the [`examples/`](./examples) folder for full workflow configurations:
 - [Test](./examples/test.yaml)
 - [CI Security](./examples/ci-security.yaml)
 
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the release process and how the two-component versioning works.
+
 ## 📄 License
 
 Published under [MIT License](./LICENSE).
