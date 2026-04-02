@@ -15,11 +15,11 @@
       "package-name": "shared-workflows",
       "initial-version": "0.1.0",
       "extra-files": [
-        ".github/workflows/ci.yaml",
-        ".github/workflows/test.yaml",
-        "examples/ci.yaml",
-        "examples/test.yaml",
-        "examples/ci-security.yaml"
+        { "type": "generic", "path": ".github/workflows/ci.yaml" },
+        { "type": "generic", "path": ".github/workflows/test.yaml" },
+        { "type": "generic", "path": "examples/ci.yaml" },
+        { "type": "generic", "path": "examples/test.yaml" },
+        { "type": "generic", "path": "examples/ci-security.yaml" }
       ]
     }
   }
