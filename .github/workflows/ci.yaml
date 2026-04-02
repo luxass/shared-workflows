@@ -13,15 +13,40 @@ on:
         type: boolean
         default: true
         required: false
+      build-script:
+        description: "Arguments passed to pnpm for the build step"
+        type: string
+        default: "build"
+        required: false
       lint:
         description: "Run the lint step"
         type: boolean
         default: true
         required: false
+      lint-script:
+        description: "Arguments passed to pnpm for the lint step"
+        type: string
+        default: "lint"
+        required: false
+      fmt:
+        description: "Run the fmt step"
+        type: boolean
+        default: false
+        required: false
+      fmt-script:
+        description: "Arguments passed to pnpm for the fmt step"
+        type: string
+        default: "fmt"
+        required: false
       typecheck:
         description: "Run the typecheck step"
         type: boolean
         default: true
+        required: false
+      typecheck-script:
+        description: "Arguments passed to pnpm for the typecheck step"
+        type: string
+        default: "typecheck"
         required: false
       persist-credentials:
         description: "Whether to persist git credentials after checkout"
@@ -86,12 +111,24 @@ jobs:
 
       - name: build
         if: ${{ inputs.build }}
-        run: pnpm build
+        env:
+          BUILD_SCRIPT: ${{ inputs.build-script }}
+        run: pnpm $BUILD_SCRIPT
 
       - name: lint
         if: ${{ inputs.lint }}
-        run: pnpm lint
+        env:
+          LINT_SCRIPT: ${{ inputs.lint-script }}
+        run: pnpm $LINT_SCRIPT
+
+      - name: fmt
+        if: ${{ inputs.fmt }}
+        env:
+          FMT_SCRIPT: ${{ inputs.fmt-script }}
+        run: pnpm $FMT_SCRIPT
 
       - name: typecheck
         if: ${{ inputs.typecheck }}
-        run: pnpm typecheck
+        env:
+          TYPECHECK_SCRIPT: ${{ inputs.typecheck-script }}
+        run: pnpm $TYPECHECK_SCRIPT
