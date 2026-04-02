@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/luxass/shared-workflows/compare/v0.2.0...v0.3.0) (2026-04-02)
+
+
+### Features
+
+* update action references and add contributing guide ([a2b2571](https://github.com/luxass/shared-workflows/commit/a2b2571a1cf79f3c8fd7d2c246773568b1285c21))
+
+
+### Miscellaneous Chores
+
+* **deps:** update actions/setup to actions/setup/v0.1.0 ([6466b6b](https://github.com/luxass/shared-workflows/commit/6466b6b77913c89bee17853431c1d1b30d256ec8))
+* downgrade version to 0.0.0 and update config ([23da791](https://github.com/luxass/shared-workflows/commit/23da7910b245aa780e79649ab8cfe3a4b9a85587))
+* **main:** release actions/setup 0.1.0 ([9c52a14](https://github.com/luxass/shared-workflows/commit/9c52a1434b194a9928e9f72b3e0642c941bc0a71))
+* **main:** release shared-workflows-setup 0.1.0 ([d4a0ea0](https://github.com/luxass/shared-workflows/commit/d4a0ea00e5cfbdc30e2c2b08fc74632b2ab34f6f))
+* **main:** release shared-workflows-setup 0.2.0 ([12a38d0](https://github.com/luxass/shared-workflows/commit/12a38d02228ef4661cbc9f851da7893d40a5f397))
+
 ## [0.2.0](https://github.com/luxass/shared-workflows/compare/v0.1.0...v0.2.0) (2026-04-02)
 
 

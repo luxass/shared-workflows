@@ -13,4 +13,4 @@ permissions: {}
 
 jobs:
   ci:
-    uses: luxass/shared-workflows/.github/workflows/ci.yaml@v0.2.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/ci.yaml@v0.3.0 # x-release-please-version
