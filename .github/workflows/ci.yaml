@@ -97,7 +97,7 @@ jobs:
       contents: read
     steps:
       - name: setup
-        uses: luxass/shared-workflows/actions/setup@v0.0.0 # x-release-please-version
+        uses: luxass/shared-workflows/actions/setup@v0.1.0 # x-release-please-version
         with:
           node-version: ${{ inputs.node-version }}
           node-version-file: ${{ inputs.node-version-file }}
