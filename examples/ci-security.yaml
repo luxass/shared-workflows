@@ -18,4 +18,4 @@ permissions: {}
 
 jobs:
   zizmor:
-    uses: luxass/shared-workflows/.github/workflows/ci-security.yaml@v0.4.1 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/ci-security.yaml@v0.4.2 # x-release-please-version

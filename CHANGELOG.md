@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/luxass/shared-workflows/compare/v0.4.1...v0.4.2) (2026-04-03)
+
+
+### Miscellaneous Chores
+
+* **release-npm:** update default publish arguments to include --no-git-checks ([92b25a5](https://github.com/luxass/shared-workflows/commit/92b25a55ac03504c3e6fd013b4091a02f7298bd3))
+
 ## [0.4.1](https://github.com/luxass/shared-workflows/compare/v0.4.0...v0.4.1) (2026-04-03)
 
 
