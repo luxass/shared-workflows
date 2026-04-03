@@ -31,7 +31,7 @@ on:
       publish-args:
         description: "Additional arguments to pass to pnpm publish"
         type: string
-        default: "--access public"
+        default: "--access public --no-git-checks"
         required: false
       generate-changelog:
         description: "Generate changelog with changelogithub"
