@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/luxass/shared-workflows/compare/v0.3.3...v0.3.4) (2026-04-03)
+
+
+### Miscellaneous Chores
+
+* **ci-security:** update actions/cache to v5.0.4 ([0f774bf](https://github.com/luxass/shared-workflows/commit/0f774bf61614d8aaea51bc17f537fecffa0a7c4c))
+
 ## [0.3.3](https://github.com/luxass/shared-workflows/compare/v0.3.2...v0.3.3) (2026-04-03)
 
 
