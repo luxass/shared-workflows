@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/luxass/shared-workflows/compare/v0.4.0...v0.4.1) (2026-04-03)
+
+
+### Bug Fixes
+
+* **release-npm:** correct recursive publish condition in workflow ([945f98f](https://github.com/luxass/shared-workflows/commit/945f98fefd79afc94588305d03ac94a11232cc90))
+
 ## [0.4.0](https://github.com/luxass/shared-workflows/compare/v0.3.4...v0.4.0) (2026-04-03)
 
 
