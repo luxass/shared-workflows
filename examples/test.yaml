@@ -13,4 +13,4 @@ permissions: {}
 
 jobs:
   test:
-    uses: luxass/shared-workflows/.github/workflows/test.yaml@v0.4.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/test.yaml@v0.4.1 # x-release-please-version
