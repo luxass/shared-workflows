@@ -113,7 +113,7 @@ jobs:
 
       - name: restore config from cache
         id: cache-config
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ${{ runner.temp }}/zizmor.yml
           key: zizmor-config-${{ needs.resolve-workflow-ref.outputs.repo }}-${{ needs.resolve-workflow-ref.outputs.sha }}
