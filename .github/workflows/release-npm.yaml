@@ -106,4 +106,4 @@ jobs:
           NPM_CONFIG_PROVENANCE: "true"
           PUBLISH_ARGS: ${{ inputs.publish-args }}
           RECURSIVE: ${{ inputs.recursive }}
-        run: pnpm publish ${{ env.RECURSIVE && '-r' || '' }} --tag "$TAG" $PUBLISH_ARGS
+        run: pnpm publish ${{ env.RECURSIVE == 'true' && '-r' || '' }} --tag "$TAG" $PUBLISH_ARGS
