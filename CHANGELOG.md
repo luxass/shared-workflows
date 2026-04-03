@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/luxass/shared-workflows/compare/v0.3.4...v0.4.0) (2026-04-03)
+
+
+### Features
+
+* **release-npm:** add npm release workflow and update README ([a4c1c3f](https://github.com/luxass/shared-workflows/commit/a4c1c3f30fa4636a9a1ba1b3a42e08c946399161))
+
 ## [0.3.4](https://github.com/luxass/shared-workflows/compare/v0.3.3...v0.3.4) (2026-04-03)
 
 
