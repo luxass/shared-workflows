@@ -21,7 +21,8 @@
       "extra-files": [
         { "type": "generic", "path": "examples/ci.yaml" },
         { "type": "generic", "path": "examples/test.yaml" },
-        { "type": "generic", "path": "examples/ci-security.yaml" }
+        { "type": "generic", "path": "examples/ci-security.yaml" },
+        { "type": "generic", "path": "examples/release-npm.yaml" }
       ]
     },
     "actions/setup": {

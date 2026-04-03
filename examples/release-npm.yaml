@@ -1,0 +1,13 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+jobs:
+  release:
+    uses: luxass/shared-workflows/.github/workflows/release-npm.yaml@v0.0.0 # x-release-please-version
+    secrets: inherit

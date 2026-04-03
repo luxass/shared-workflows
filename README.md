@@ -7,6 +7,7 @@ Reusable GitHub Actions workflows and composite actions for Node.js projects usi
 - **CI**: Runs build, lint, and typecheck (each toggleable)
 - **Test**: Runs tests
 - **CI Security**: Runs [zizmor](https://github.com/woodruffw/zizmor) security analysis on workflows
+- **Release (npm)**: Publish packages to npm with OIDC provenance
 
 ## Included Actions
 
@@ -37,6 +38,7 @@ See the [`examples/`](./examples) folder for full workflow configurations:
 - [CI](./examples/ci.yaml)
 - [Test](./examples/test.yaml)
 - [CI Security](./examples/ci-security.yaml)
+- [Release (npm)](./examples/release-npm.yaml)
 
 ## Contributing
 

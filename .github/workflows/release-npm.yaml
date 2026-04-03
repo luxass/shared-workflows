@@ -1,0 +1,109 @@
+name: Release (npm)
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        type: string
+        default: "lts/*"
+        required: false
+      environment:
+        description: "GitHub environment to use (must have NPM_CONFIG_PROVENANCE secrets etc.)"
+        type: string
+        default: "npm-registry"
+        required: false
+      build:
+        description: "Run the build step before publishing"
+        type: boolean
+        default: true
+        required: false
+      build-script:
+        description: "Arguments passed to pnpm for the build step"
+        type: string
+        default: "build"
+        required: false
+      recursive:
+        description: "Publish all packages in the workspace (pnpm publish -r)"
+        type: boolean
+        default: false
+        required: false
+      publish-args:
+        description: "Additional arguments to pass to pnpm publish"
+        type: string
+        default: "--access public"
+        required: false
+      generate-changelog:
+        description: "Generate changelog with changelogithub"
+        type: boolean
+        default: true
+        required: false
+      install-args:
+        description: "Additional arguments to pass to pnpm install"
+        type: string
+        default: ""
+        required: false
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+      - name: setup node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: update npm (oidc provenance)
+        run: npm install -g npm@latest
+
+      - name: generate changelog
+        if: ${{ inputs.generate-changelog }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpx changelogithub
+
+      - name: install dependencies
+        env:
+          INSTALL_ARGS: ${{ inputs.install-args }}
+        run: pnpm install --frozen-lockfile $INSTALL_ARGS
+
+      - name: build
+        if: ${{ inputs.build }}
+        env:
+          BUILD_SCRIPT: ${{ inputs.build-script }}
+        run: pnpm $BUILD_SCRIPT
+
+      - name: detect tag
+        id: tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+
+          if [[ "$LATEST_TAG" == *-* ]]; then
+            echo "tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: publish to npm
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          NPM_CONFIG_PROVENANCE: "true"
+          PUBLISH_ARGS: ${{ inputs.publish-args }}
+          RECURSIVE: ${{ inputs.recursive }}
+        run: pnpm publish ${{ env.RECURSIVE && '-r' || '' }} --tag "$TAG" $PUBLISH_ARGS
