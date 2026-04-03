@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/luxass/shared-workflows/compare/v0.3.2...v0.3.3) (2026-04-03)
+
+
+### Bug Fixes
+
+* **ci-security:** improve JWT payload decoding in OIDC token ([5b2c23d](https://github.com/luxass/shared-workflows/commit/5b2c23d0cc79bf87055bee4c5b97ff5cc6d1a9dd))
+
 ## [0.3.2](https://github.com/luxass/shared-workflows/compare/v0.3.1...v0.3.2) (2026-04-02)
 
 
