@@ -70,8 +70,11 @@ jobs:
             fallback "Failed to retrieve OIDC token."
           fi
 
-          # Decode JWT payload (second segment, base64url)
-          PAYLOAD=$(echo "$OIDC_TOKEN" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null)
+          # Decode JWT payload (second segment, base64url → base64 with padding)
+          B64=$(echo "$OIDC_TOKEN" | cut -d. -f2 | tr '_-' '/+')
+          PAD=$(( 4 - ${#B64} % 4 ))
+          [ "$PAD" -lt 4 ] && B64="${B64}$(printf '=%.0s' $(seq 1 "$PAD"))"
+          PAYLOAD=$(echo "$B64" | base64 -d)
 
           JOB_REF=$(echo "$PAYLOAD" | jq -r '.job_workflow_ref // empty')
           if [ -z "$JOB_REF" ]; then
