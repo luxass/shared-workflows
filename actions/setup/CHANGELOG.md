@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/luxass/shared-workflows/compare/actions/setup/v0.1.0...actions/setup/v0.1.1) (2026-04-20)
+
+
+### Miscellaneous Chores
+
+* update actions ([547d064](https://github.com/luxass/shared-workflows/commit/547d064920f39983a29605158436c0a231551b7f))
+
 ## 0.1.0 (2026-04-02)
 
 
