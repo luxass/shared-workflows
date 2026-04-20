@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.3](https://github.com/luxass/shared-workflows/compare/v0.4.2...v0.4.3) (2026-04-20)
+
+
+### Miscellaneous Chores
+
+* **deps:** update pnpm to v10.28.2 [security] ([#16](https://github.com/luxass/shared-workflows/issues/16)) ([1691671](https://github.com/luxass/shared-workflows/commit/169167140807f82c9419e5bfb1a10dfa37241683))
+* **main:** release actions/setup 0.1.1 ([#18](https://github.com/luxass/shared-workflows/issues/18)) ([4e838e7](https://github.com/luxass/shared-workflows/commit/4e838e75ef8e2f2f71872efb5a84715866a14254))
+* update actions ([547d064](https://github.com/luxass/shared-workflows/commit/547d064920f39983a29605158436c0a231551b7f))
+
 ## [0.4.2](https://github.com/luxass/shared-workflows/compare/v0.4.1...v0.4.2) (2026-04-03)
 
 
