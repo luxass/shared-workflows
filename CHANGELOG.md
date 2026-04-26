@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.5.0](https://github.com/luxass/shared-workflows/compare/v0.4.4...v0.5.0) (2026-04-26)
+
+
+### Features
+
+* fail ci security on findings by default ([6633a60](https://github.com/luxass/shared-workflows/commit/6633a60d04afc6245a63a2de303124ea0fed24a2))
+
+
+### Documentation
+
+* add reusable workflow guidance ([1cc9a4a](https://github.com/luxass/shared-workflows/commit/1cc9a4a0ed74b20fe5d883916d74916b0ab766af))
+* consolidate agent workflow guidance ([cabcce9](https://github.com/luxass/shared-workflows/commit/cabcce94a80b945e7a51d3762765730faea4b6ab))
+
+
+### Miscellaneous Chores
+
+* update app-id to client-id in token generation ([0fabd97](https://github.com/luxass/shared-workflows/commit/0fabd979928c44320626b1129091efc613f1fce0))
+* update workflow action references ([88900e4](https://github.com/luxass/shared-workflows/commit/88900e41b0beb827faea7cc9b87259d7782d4ca9))
+
 ## [0.4.4](https://github.com/luxass/shared-workflows/compare/v0.4.3...v0.4.4) (2026-04-20)
 
 

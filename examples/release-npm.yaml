@@ -12,5 +12,5 @@ jobs:
     permissions:
       id-token: write
       contents: write
-    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.4.4 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.5.0 # x-release-please-version
     secrets: inherit
