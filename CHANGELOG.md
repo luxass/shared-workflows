@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/luxass/shared-workflows/compare/v0.5.0...v0.6.0) (2026-04-26)
+
+
+### Features
+
+* add reusable ci post-build hook ([e76a171](https://github.com/luxass/shared-workflows/commit/e76a171313d6e89bb75ff678e5d0ce6ea6b91ec3))
+
 ## [0.5.0](https://github.com/luxass/shared-workflows/compare/v0.4.4...v0.5.0) (2026-04-26)
 
 
