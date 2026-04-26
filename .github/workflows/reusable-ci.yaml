@@ -18,6 +18,11 @@ on:
         type: string
         default: "build"
         required: false
+      post-build-script:
+        description: "Arguments passed to pnpm after the build step"
+        type: string
+        default: ""
+        required: false
       lint:
         description: "Run the lint step"
         type: boolean
@@ -114,6 +119,12 @@ jobs:
         env:
           BUILD_SCRIPT: ${{ inputs.build-script }}
         run: pnpm $BUILD_SCRIPT
+
+      - name: post-build
+        if: ${{ inputs.build && inputs.post-build-script != '' }}
+        env:
+          POST_BUILD_SCRIPT: ${{ inputs.post-build-script }}
+        run: pnpm $POST_BUILD_SCRIPT
 
       - name: lint
         if: ${{ inputs.lint }}

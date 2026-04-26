@@ -53,6 +53,7 @@ jobs:
 | `node-version` | `string` | `lts/*` | Node.js version to use. |
 | `build` | `boolean` | `true` | Run the build step. |
 | `build-script` | `string` | `build` | Arguments passed to `pnpm` for the build step. |
+| `post-build-script` | `string` | `""` | Arguments passed to `pnpm` after the build step. Runs only when `build` is enabled and this input is not empty. |
 | `lint` | `boolean` | `true` | Run the lint step. |
 | `lint-script` | `string` | `lint` | Arguments passed to `pnpm` for the lint step. |
 | `fmt` | `boolean` | `false` | Run the fmt step. |
