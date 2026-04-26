@@ -3,6 +3,21 @@ name: GitHub Actions Security Analysis
 on:
   workflow_call:
     inputs:
+      min-severity:
+        description: "Only show results at or above this severity [possible values: unknown, informational, low, medium, high]"
+        required: false
+        type: string
+        default: "low"
+      min-confidence:
+        description: "Only show results at or above this confidence level [possible values: unknown, low, medium, high]"
+        required: false
+        type: string
+        default: "low"
+      fail-on-findings:
+        description: "Fail the workflow when zizmor finds issues"
+        required: false
+        type: boolean
+        default: true
       zizmor-version:
         description: "Version of zizmor to install"
         type: string
@@ -23,6 +38,7 @@ on:
         description: "GitHub token for zizmor to use for API calls (defaults to GITHUB_TOKEN)"
         required: false
 
+# Ensure that default `GITHUB_TOKEN` doesn't have any permissions.
 permissions: {}
 
 jobs:
@@ -31,8 +47,9 @@ jobs:
   # job_workflow_ref claim. Runs in a separate job to keep id-token: write
   # scoped away from the main analysis job.
   resolve-workflow-ref:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
+      contents: read
       id-token: write
     outputs:
       owner: ${{ steps.resolve.outputs.owner }}
@@ -43,11 +60,11 @@ jobs:
         id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
+          FALLBACK_OWNER: luxass
+          FALLBACK_REPO: shared-workflows
         run: |
           set -euo pipefail
 
-          FALLBACK_OWNER="luxass"
-          FALLBACK_REPO="shared-workflows"
           FALLBACK_SHA="main"
 
           fallback() {
@@ -58,7 +75,7 @@ jobs:
             exit 0
           }
 
-          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
             fallback "No OIDC token available (e.g. fork PR)."
           fi
 
@@ -101,8 +118,9 @@ jobs:
   zizmor:
     name: zizmor
     needs: resolve-workflow-ref
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
+      actions: read
       security-events: write
       contents: read
     steps:
@@ -116,7 +134,7 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ${{ runner.temp }}/zizmor.yml
-          key: zizmor-config-${{ needs.resolve-workflow-ref.outputs.repo }}-${{ needs.resolve-workflow-ref.outputs.sha }}
+          key: zizmor-config-${{ needs.resolve-workflow-ref.outputs.owner }}-${{ needs.resolve-workflow-ref.outputs.repo }}-${{ needs.resolve-workflow-ref.outputs.sha }}
 
       - name: fetch default config
         if: steps.cache-config.outputs.cache-hit != 'true'
@@ -144,10 +162,12 @@ jobs:
           if [ -z "$FORCE_DEFAULT" ]; then
             if [ -f ".github/zizmor.yml" ]; then
               echo "Using caller's .github/zizmor.yml"
+              echo "path=.github/zizmor.yml" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             if [ -f "zizmor.yml" ]; then
               echo "Using caller's zizmor.yml"
+              echo "path=zizmor.yml" >> "$GITHUB_OUTPUT"
               exit 0
             fi
           fi
@@ -165,22 +185,45 @@ jobs:
         with:
           enable-cache: false
           cache-dependency-glob: ""
+          version: 0.11.6
 
       - name: run zizmor
+        id: zizmor
         env:
           GH_TOKEN: ${{ secrets.token || github.token }}
           ZIZMOR_ARGS: ${{ inputs.zizmor-args }}
           ZIZMOR_VERSION: ${{ inputs.zizmor-version }}
-          ZIZMOR_CONFIG: ${{ steps.config.outputs.path }}
+          ZIZMOR_CONFIG_PATH: ${{ steps.config.outputs.path }}
+          MIN_SEVERITY: ${{ inputs.min-severity }}
+          MIN_CONFIDENCE: ${{ inputs.min-confidence }}
         run: |
+          set +e
           uvx zizmor@"$ZIZMOR_VERSION" \
             --format sarif \
-            ${ZIZMOR_CONFIG:+--config "$ZIZMOR_CONFIG"} \
-            $ZIZMOR_ARGS \
-            . > results.sarif
+            --min-severity "${MIN_SEVERITY}" \
+            --min-confidence "${MIN_CONFIDENCE}" \
+            ${ZIZMOR_CONFIG_PATH:+--config "$ZIZMOR_CONFIG_PATH"} \
+            ${RUNNER_DEBUG:+"--verbose"} \
+            ${ZIZMOR_ARGS:+${ZIZMOR_ARGS}} \
+            . \
+            > results.sarif
+          exit_code=$?
+          set -e
+
+          # Only fail on exit code 1 (zizmor crash). 0 = no findings, 10-14 = findings by severity.
+          if [ "${exit_code}" -eq 1 ]; then exit 1; fi
+          echo "exit-code=${exit_code}" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: upload sarif file
         uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        continue-on-error: true
         with:
           sarif_file: results.sarif
           category: zizmor
+
+      - name: fail on findings
+        if: ${{ inputs.fail-on-findings && steps.zizmor.outputs.exit-code >= 10 && steps.zizmor.outputs.exit-code <= 14 }}
+        env:
+          EXIT_CODE: ${{ steps.zizmor.outputs.exit-code }}
+        run: exit "$EXIT_CODE"
