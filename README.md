@@ -28,9 +28,9 @@ permissions: {}
 
 jobs:
   ci:
-    uses: luxass/shared-workflows/.github/workflows/ci.yaml@v0.1.0
+    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.1.0
   test:
-    uses: luxass/shared-workflows/.github/workflows/test.yaml@v0.1.0
+    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.1.0
 ```
 
 See the [`examples/`](./examples) folder for full workflow configurations:

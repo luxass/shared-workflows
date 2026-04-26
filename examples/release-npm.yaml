@@ -9,5 +9,8 @@ permissions: {}
 
 jobs:
   release:
-    uses: luxass/shared-workflows/.github/workflows/release-npm.yaml@v0.4.4 # x-release-please-version
+    permissions:
+      id-token: write
+      contents: write
+    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.4.4 # x-release-please-version
     secrets: inherit

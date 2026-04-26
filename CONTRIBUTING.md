@@ -18,10 +18,10 @@ This repository uses two independent release components managed by [release-plea
 
 ### When `actions/setup` changes
 
-The reusable workflows (`ci.yaml`, `test.yaml`) reference `actions/setup` by **full SHA** to satisfy strict pinning requirements. When the setup action is released:
+The reusable workflows (`reusable-ci.yaml`, `reusable-test.yaml`) reference `actions/setup` by **full SHA** to satisfy strict pinning requirements. When the setup action is released:
 
 1. Merge the `actions/setup` release PR → creates tag `actions/setup/v{version}`
-2. The `update-action-refs` workflow triggers automatically and opens a PR updating the SHA references in `ci.yaml` and `test.yaml`
+2. The `update-action-refs` workflow triggers automatically and opens a PR updating the SHA references in `reusable-ci.yaml` and `reusable-test.yaml`
 3. Merge that PR
 4. Release-please picks up the change and creates a workflows release PR
 5. Merge the workflows release PR → creates tag `v{version}`
