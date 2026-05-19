@@ -1,0 +1,154 @@
+name: Update Homebrew Tap
+
+on:
+  workflow_call:
+    inputs:
+      tap-repository:
+        description: "Homebrew tap repository (e.g. luxass/homebrew-tap)"
+        type: string
+        required: true
+      formula-path:
+        description: "Path to the formula file in the tap repo"
+        type: string
+        required: true
+      formula-name:
+        description: "Name of the formula (used for sha-update-id markers)"
+        type: string
+        required: true
+      app-id:
+        description: "GitHub App ID for tap repo access"
+        type: string
+        required: true
+      app-private-key:
+        description: "GitHub App private key for tap repo access"
+        type: string
+        required: true
+      base-branch:
+        description: "Base branch for the PR"
+        type: string
+        default: "main"
+        required: false
+      environment:
+        description: "GitHub environment to use"
+        type: string
+        default: "homebrew-tap"
+        required: false
+      targets:
+        description: "JSON array of targets to update checksums for"
+        type: string
+        default: '["aarch64-apple-darwin", "x86_64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu"]'
+        required: false
+
+permissions: {}
+
+jobs:
+  update-formula:
+    name: Update ${{ inputs.formula-name }} formula
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
+    permissions:
+      contents: read
+    steps:
+      - name: generate app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ inputs.app-id }}
+          private-key: ${{ inputs.app-private-key }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ inputs.tap-repository }}
+          permission-contents: read
+
+      - name: download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          mkdir -p assets
+          gh release download "$tag" -D assets --pattern '*.tar.gz' --pattern '*.zip'
+
+      - name: compute checksums
+        id: checksums
+        env:
+          TARGETS: ${{ inputs.targets }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+
+          while IFS= read -r target; do
+            tarball="actioneer-${version}-${target}.tar.gz"
+            if [ -f "assets/${tarball}" ]; then
+              sha=$(sha256sum "assets/${tarball}" | awk '{print $1}')
+              echo "${target}=${sha}" >> "$GITHUB_OUTPUT"
+            fi
+          done < <(echo "$TARGETS" | jq -r '.[]')
+
+      - name: clone homebrew-tap
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ inputs.tap-repository }}
+          token: ${{ steps.app-token.outputs.token }}
+          path: tap
+          persist-credentials: false
+
+      - name: update formula
+        env:
+          VERSION: ${{ github.event.release.tag_name }}
+          FORMULA_PATH: ${{ inputs.formula-path }}
+          FORMULA_NAME: ${{ inputs.formula-name }}
+          TARGETS: ${{ inputs.targets }}
+          DARWIN_ARM_SHA: ${{ steps.checksums.outputs.aarch64-apple-darwin }}
+          DARWIN_X64_SHA: ${{ steps.checksums.outputs.x86_64-apple-darwin }}
+          LINUX_ARM_SHA: ${{ steps.checksums.outputs.aarch64-unknown-linux-gnu }}
+          LINUX_X64_SHA: ${{ steps.checksums.outputs.x86_64-unknown-linux-gnu }}
+        run: |
+          set -euo pipefail
+          formula="tap/${FORMULA_PATH}"
+
+          if [ ! -f "$formula" ]; then
+            echo "Formula not found at ${formula}" >&2
+            exit 1
+          fi
+
+          while IFS= read -r target; do
+            case "$target" in
+              aarch64-apple-darwin) sha="$DARWIN_ARM_SHA" ;;
+              x86_64-apple-darwin) sha="$DARWIN_X64_SHA" ;;
+              aarch64-unknown-linux-gnu) sha="$LINUX_ARM_SHA" ;;
+              x86_64-unknown-linux-gnu) sha="$LINUX_X64_SHA" ;;
+              *) continue ;;
+            esac
+            if [ -n "$sha" ]; then
+              sed -i "s|sha256 \"[a-f0-9]\{64\}\".*# sha-update-id: ${FORMULA_NAME}-${target}|sha256 \"${sha}\" # sha-update-id: ${FORMULA_NAME}-${target}|" "$formula"
+            fi
+          done < <(echo "$TARGETS" | jq -r '.[]')
+
+          sed -i "s|version \".*\"|version \"${VERSION#v}\"|" "$formula"
+
+      - name: create pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          FORMULA_NAME: ${{ inputs.formula-name }}
+          BASE: ${{ inputs.base-branch }}
+        run: |
+          set -euo pipefail
+          cd tap
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          branch="update-${FORMULA_NAME}-${TAG}"
+          git checkout -b "$branch"
+          git add -A
+          git commit -m "chore: update ${FORMULA_NAME} to ${TAG}"
+          git push origin "$branch"
+
+          gh pr create \
+            --title "chore: update ${FORMULA_NAME} to ${TAG}" \
+            --body "Automated update of ${FORMULA_NAME} formula to ${TAG}" \
+            --base "$BASE" \
+            --head "$branch"
