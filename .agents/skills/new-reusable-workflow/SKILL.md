@@ -14,7 +14,7 @@ Scaffold a `reusable-*.yaml` workflow that follows AGENTS.md conventions.
 3. **Generate the workflow** using the template below
 4. **Create sibling docs** - `reusable-<name>.md` with usage, inputs, secrets, permissions
 5. **Add/update example** in `examples/` with correct permissions
-6. **Update release config** if needed (check `release-please-config.json`)
+6. **Add to release-please-config.json** - add the new workflow path to the `extra-files` array so Release Please updates its version tag in examples
 
 ## Template
 

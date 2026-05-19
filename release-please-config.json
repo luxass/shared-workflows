@@ -22,7 +22,12 @@
         { "type": "generic", "path": "examples/ci.yaml" },
         { "type": "generic", "path": "examples/test.yaml" },
         { "type": "generic", "path": "examples/ci-security.yaml" },
-        { "type": "generic", "path": "examples/release-npm.yaml" }
+        { "type": "generic", "path": "examples/release-npm.yaml" },
+        { "type": "generic", "path": ".github/workflows/reusable-ci.md" },
+        { "type": "generic", "path": ".github/workflows/reusable-ci-security.md" },
+        { "type": "generic", "path": ".github/workflows/reusable-release-npm.md" },
+        { "type": "generic", "path": ".github/workflows/reusable-test.md" },
+        { "type": "generic", "path": ".github/workflows/reusable-homebrew-tap.md" }
       ]
     },
     "actions/setup": {
