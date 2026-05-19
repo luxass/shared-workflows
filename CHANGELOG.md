@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/luxass/shared-workflows/compare/v0.6.0...v0.7.0) (2026-05-19)
+
+
+### Features
+
+* add new-reusable-workflow skill and reusable-homebrew-tap workflow ([f19d8a3](https://github.com/luxass/shared-workflows/commit/f19d8a398f59ab5faf72fcbc8f7b293fb067d906))
+* add reusable homebrew tap workflow and update release ci ([f87607f](https://github.com/luxass/shared-workflows/commit/f87607ffc6db7547bcd906aeb22ef9554c19677b))
+
+
+### Bug Fixes
+
+* simplify token resolution in homebrew tap workflow ([#24](https://github.com/luxass/shared-workflows/issues/24)) ([495fde4](https://github.com/luxass/shared-workflows/commit/495fde43965523341023e6a5bb21fd4e5e3d29ab))
+
 ## [0.6.0](https://github.com/luxass/shared-workflows/compare/v0.5.0...v0.6.0) (2026-04-26)
 
 

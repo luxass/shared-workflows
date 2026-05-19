@@ -26,7 +26,7 @@ jobs:
   test:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.4.4 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.7.0 # x-release-please-version
 ```
 
 ## With Custom Test Command
@@ -36,7 +36,7 @@ jobs:
   test:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.4.4 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.7.0 # x-release-please-version
     with:
       node-version: 22
       test-script: "test:ci"
