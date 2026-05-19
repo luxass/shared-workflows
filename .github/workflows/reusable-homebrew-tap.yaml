@@ -76,18 +76,6 @@ jobs:
           repositories: ${{ inputs.tap-repository }}
           permission-contents: read
 
-      - name: set tap token
-        id: tap-token
-        env:
-          TOKEN: ${{ inputs.token }}
-          APP_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          if [ -n "$TOKEN" ]; then
-            echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
-          else
-            echo "token=$APP_TOKEN" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: download release assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -117,7 +105,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ inputs.tap-repository }}
-          token: ${{ steps.tap-token.outputs.token }}
+          token: ${{ inputs.token || steps.app-token.outputs.token }}
           path: tap
           persist-credentials: false
 
@@ -157,7 +145,7 @@ jobs:
 
       - name: create pr
         env:
-          GH_TOKEN: ${{ steps.tap-token.outputs.token }}
+          GH_TOKEN: ${{ inputs.token || steps.app-token.outputs.token }}
           TAG: ${{ github.event.release.tag_name }}
           FORMULA_NAME: ${{ inputs.formula-name }}
           BASE: ${{ inputs.base-branch }}
