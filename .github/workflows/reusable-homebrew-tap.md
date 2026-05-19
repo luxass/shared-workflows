@@ -19,7 +19,7 @@ permissions: {}
 
 jobs:
   update-formula:
-    uses: luxass/shared-workflows/.github/workflows/reusable-homebrew-tap.yaml@v0.6.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-homebrew-tap.yaml@v0.7.0 # x-release-please-version
     with:
       tap-repository: luxass/homebrew-tap
       formula-path: Formula/actioneer.rb
@@ -33,7 +33,7 @@ jobs:
 ```yaml
 jobs:
   update-formula:
-    uses: luxass/shared-workflows/.github/workflows/reusable-homebrew-tap.yaml@v0.6.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-homebrew-tap.yaml@v0.7.0 # x-release-please-version
     with:
       tap-repository: luxass/homebrew-tap
       formula-path: Formula/actioneer.rb
