@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/luxass/shared-workflows/compare/v0.7.1...v0.7.2) (2026-05-20)
+
+
+### Bug Fixes
+
+* add checkout step before downloading release assets ([#28](https://github.com/luxass/shared-workflows/issues/28)) ([d590985](https://github.com/luxass/shared-workflows/commit/d5909854b9cea593f64f8b5adc58e5b4cd81ef08))
+
 ## [0.7.1](https://github.com/luxass/shared-workflows/compare/v0.7.0...v0.7.1) (2026-05-20)
 
 
