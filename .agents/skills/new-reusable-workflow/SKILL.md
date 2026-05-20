@@ -71,6 +71,7 @@ jobs:
 - `set -euo pipefail` in all multi-line shell scripts
 - No `pull_request_target` triggers
 - Inputs/secrets must have descriptions
+- For GitHub App auth examples, prefer mapping both `app-id` and `app-private-key` from caller secrets for consistency
 - Follow the existing repo patterns (pnpm, actions/setup, etc.)
 
 ## Sibling doc structure
