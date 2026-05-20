@@ -125,7 +125,6 @@ jobs:
           repository: ${{ inputs.tap-repository }}
           token: ${{ secrets.token || steps.app-token.outputs.token }}
           path: tap
-          persist-credentials: false
 
       - name: update formula
         env:
