@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.3](https://github.com/luxass/shared-workflows/compare/v0.7.2...v0.7.3) (2026-05-20)
+
+
+### Bug Fixes
+
+* grant contents:write and pull-requests:write for tap repo ([#32](https://github.com/luxass/shared-workflows/issues/32)) ([b151895](https://github.com/luxass/shared-workflows/commit/b151895db9f99accdf64bd613208bd9ecfd11229))
+* remove persist-credentials:false to allow git push in tap repo ([#30](https://github.com/luxass/shared-workflows/issues/30)) ([a8c7a9c](https://github.com/luxass/shared-workflows/commit/a8c7a9cba106c0d3c5c3267a17e7865a380c9779))
+
 ## [0.7.2](https://github.com/luxass/shared-workflows/compare/v0.7.1...v0.7.2) (2026-05-20)
 
 
