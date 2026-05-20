@@ -13,8 +13,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      issues: write
-      actions: write
     environment:
       name: release
       deployment: false
@@ -31,8 +29,6 @@ jobs:
           repositories: shared-workflows
           permission-contents: write
           permission-pull-requests: write
-          permission-issues: write
-          permission-actions: write
 
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
