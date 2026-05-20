@@ -15,16 +15,8 @@ on:
         description: "Name of the formula (used for sha-update-id markers)"
         type: string
         required: true
-      token:
-        description: "GitHub token for tap repo access (use if not using GitHub App)"
-        type: string
-        required: false
       app-id:
         description: "GitHub App client ID for tap repo access"
-        type: string
-        required: false
-      app-private-key:
-        description: "GitHub App private key for tap repo access"
         type: string
         required: false
       base-branch:
@@ -42,6 +34,13 @@ on:
         type: string
         default: '["aarch64-apple-darwin", "x86_64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu"]'
         required: false
+    secrets:
+      token:
+        description: "GitHub token for tap repo access (use if not using GitHub App)"
+        required: false
+      app-private-key:
+        description: "GitHub App private key for tap repo access"
+        required: false
 
 permissions: {}
 
@@ -57,13 +56,25 @@ jobs:
     steps:
       - name: validate auth
         env:
-          TOKEN: ${{ inputs.token }}
+          TOKEN: ${{ secrets.token }}
           APP_ID: ${{ inputs.app-id }}
+          APP_PRIVATE_KEY: ${{ secrets.app-private-key }}
         run: |
-          if [ -z "$TOKEN" ] && [ -z "$APP_ID" ]; then
-            echo "Either 'token' or 'app-id'/'app-private-key' must be provided" >&2
+          if [ -n "$TOKEN" ]; then
+            exit 0
+          fi
+
+          if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            exit 0
+          fi
+
+          if [ -n "$APP_ID" ] || [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "Both 'app-id' and 'app-private-key' must be provided together when not using 'token'" >&2
             exit 1
           fi
+
+          echo "Either 'token' or both 'app-id' and 'app-private-key' must be provided" >&2
+          exit 1
 
       - name: generate app token
         if: ${{ inputs.app-id != '' }}
@@ -71,7 +82,7 @@ jobs:
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ inputs.app-id }}
-          private-key: ${{ inputs.app-private-key }}
+          private-key: ${{ secrets.app-private-key }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ inputs.tap-repository }}
           permission-contents: read
@@ -105,7 +116,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ inputs.tap-repository }}
-          token: ${{ inputs.token || steps.app-token.outputs.token }}
+          token: ${{ secrets.token || steps.app-token.outputs.token }}
           path: tap
           persist-credentials: false
 
@@ -115,10 +126,10 @@ jobs:
           FORMULA_PATH: ${{ inputs.formula-path }}
           FORMULA_NAME: ${{ inputs.formula-name }}
           TARGETS: ${{ inputs.targets }}
-          DARWIN_ARM_SHA: ${{ steps.checksums.outputs.aarch64-apple-darwin }}
-          DARWIN_X64_SHA: ${{ steps.checksums.outputs.x86_64-apple-darwin }}
-          LINUX_ARM_SHA: ${{ steps.checksums.outputs.aarch64-unknown-linux-gnu }}
-          LINUX_X64_SHA: ${{ steps.checksums.outputs.x86_64-unknown-linux-gnu }}
+          DARWIN_ARM_SHA: ${{ steps.checksums.outputs['aarch64-apple-darwin'] }}
+          DARWIN_X64_SHA: ${{ steps.checksums.outputs['x86_64-apple-darwin'] }}
+          LINUX_ARM_SHA: ${{ steps.checksums.outputs['aarch64-unknown-linux-gnu'] }}
+          LINUX_X64_SHA: ${{ steps.checksums.outputs['x86_64-unknown-linux-gnu'] }}
         run: |
           set -euo pipefail
           formula="tap/${FORMULA_PATH}"
@@ -145,7 +156,7 @@ jobs:
 
       - name: create pr
         env:
-          GH_TOKEN: ${{ inputs.token || steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ secrets.token || steps.app-token.outputs.token }}
           TAG: ${{ github.event.release.tag_name }}
           FORMULA_NAME: ${{ inputs.formula-name }}
           BASE: ${{ inputs.base-branch }}

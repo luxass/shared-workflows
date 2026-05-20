@@ -23,6 +23,7 @@
         { "type": "generic", "path": "examples/test.yaml" },
         { "type": "generic", "path": "examples/ci-security.yaml" },
         { "type": "generic", "path": "examples/release-npm.yaml" },
+        { "type": "generic", "path": "examples/homebrew-tap.yaml" },
         { "type": "generic", "path": ".github/workflows/reusable-ci.md" },
         { "type": "generic", "path": ".github/workflows/reusable-ci-security.md" },
         { "type": "generic", "path": ".github/workflows/reusable-release-npm.md" },

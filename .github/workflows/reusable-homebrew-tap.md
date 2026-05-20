@@ -19,12 +19,15 @@ permissions: {}
 
 jobs:
   update-formula:
+    permissions:
+      contents: read
     uses: luxass/shared-workflows/.github/workflows/reusable-homebrew-tap.yaml@v0.7.0 # x-release-please-version
     with:
       tap-repository: luxass/homebrew-tap
       formula-path: Formula/actioneer.rb
       formula-name: actioneer
       app-id: ${{ secrets.HOMEBREW_TAP_APP_ID }}
+    secrets:
       app-private-key: ${{ secrets.HOMEBREW_TAP_APP_PRIVATE_KEY }}
 ```
 
@@ -33,11 +36,14 @@ jobs:
 ```yaml
 jobs:
   update-formula:
+    permissions:
+      contents: read
     uses: luxass/shared-workflows/.github/workflows/reusable-homebrew-tap.yaml@v0.7.0 # x-release-please-version
     with:
       tap-repository: luxass/homebrew-tap
       formula-path: Formula/actioneer.rb
       formula-name: actioneer
+    secrets:
       token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
@@ -48,18 +54,22 @@ jobs:
 | `tap-repository` | `string` | - | Homebrew tap repository (e.g. `luxass/homebrew-tap`). |
 | `formula-path` | `string` | - | Path to the formula file in the tap repo. |
 | `formula-name` | `string` | - | Name of the formula (used for `sha-update-id` markers). |
-| `token` | `string` | - | GitHub token for tap repo access. Required if not using GitHub App. |
 | `app-id` | `string` | - | GitHub App client ID. Required if not using `token`. |
-| `app-private-key` | `string` | - | GitHub App private key. Required if not using `token`. |
 | `base-branch` | `string` | `main` | Base branch for the PR. |
 | `environment` | `string` | `homebrew-tap` | GitHub environment to use. |
 | `targets` | `string` | `[darwin arm/x64, linux arm/x64]` | JSON array of targets to update checksums for. |
 
 ## Secrets
 
-This workflow does not define explicit `workflow_call` secrets. Pass credentials via `with` inputs from the caller's secrets.
+| Name | Required | Description |
+| --- | --- | --- |
+| `token` | No | GitHub token for tap repo access. Use as an alternative to GitHub App auth. |
+| `app-private-key` | No | GitHub App private key. Must be provided together with `app-id`. |
 
-At least one of `token` or `app-id`/`app-private-key` must be provided.
+Authentication requirements:
+
+- Provide either `secrets.token`, or
+- provide both `with.app-id` and `secrets.app-private-key`.
 
 ## Permissions
 
@@ -67,6 +77,13 @@ The caller can keep top-level permissions empty:
 
 ```yaml
 permissions: {}
+```
+
+Each calling job must grant:
+
+```yaml
+permissions:
+  contents: read
 ```
 
 ## Formula Requirements
