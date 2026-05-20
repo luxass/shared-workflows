@@ -26,8 +26,8 @@ jobs:
       tap-repository: luxass/homebrew-tap
       formula-path: Formula/actioneer.rb
       formula-name: actioneer
-      app-id: ${{ secrets.HOMEBREW_TAP_APP_ID }}
     secrets:
+      app-id: ${{ secrets.HOMEBREW_TAP_APP_ID }}
       app-private-key: ${{ secrets.HOMEBREW_TAP_APP_PRIVATE_KEY }}
 ```
 
@@ -54,7 +54,6 @@ jobs:
 | `tap-repository` | `string` | - | Homebrew tap repository (e.g. `luxass/homebrew-tap`). |
 | `formula-path` | `string` | - | Path to the formula file in the tap repo. |
 | `formula-name` | `string` | - | Name of the formula (used for `sha-update-id` markers). |
-| `app-id` | `string` | - | GitHub App client ID. Required if not using `token`. |
 | `base-branch` | `string` | `main` | Base branch for the PR. |
 | `environment` | `string` | `homebrew-tap` | GitHub environment to use. |
 | `targets` | `string` | `[darwin arm/x64, linux arm/x64]` | JSON array of targets to update checksums for. |
@@ -64,12 +63,13 @@ jobs:
 | Name | Required | Description |
 | --- | --- | --- |
 | `token` | No | GitHub token for tap repo access. Use as an alternative to GitHub App auth. |
+| `app-id` | No | GitHub App client ID. Must be provided together with `app-private-key`. |
 | `app-private-key` | No | GitHub App private key. Must be provided together with `app-id`. |
 
 Authentication requirements:
 
 - Provide either `secrets.token`, or
-- provide both `with.app-id` and `secrets.app-private-key`.
+- provide both `secrets.app-id` and `secrets.app-private-key`.
 
 ## Permissions
 

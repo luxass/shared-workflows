@@ -15,10 +15,6 @@ on:
         description: "Name of the formula (used for sha-update-id markers)"
         type: string
         required: true
-      app-id:
-        description: "GitHub App client ID for tap repo access"
-        type: string
-        required: false
       base-branch:
         description: "Base branch for the PR"
         type: string
@@ -38,6 +34,9 @@ on:
       token:
         description: "GitHub token for tap repo access (use if not using GitHub App)"
         required: false
+      app-id:
+        description: "GitHub App client ID for tap repo access"
+        required: false
       app-private-key:
         description: "GitHub App private key for tap repo access"
         required: false
@@ -55,16 +54,19 @@ jobs:
       contents: read
     steps:
       - name: validate auth
+        id: auth
         env:
           TOKEN: ${{ secrets.token }}
-          APP_ID: ${{ inputs.app-id }}
+          APP_ID: ${{ secrets.app-id }}
           APP_PRIVATE_KEY: ${{ secrets.app-private-key }}
         run: |
           if [ -n "$TOKEN" ]; then
+            echo "use-app-auth=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "use-app-auth=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -77,11 +79,11 @@ jobs:
           exit 1
 
       - name: generate app token
-        if: ${{ inputs.app-id != '' }}
+        if: ${{ steps.auth.outputs.use-app-auth == 'true' }}
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ inputs.app-id }}
+          client-id: ${{ secrets.app-id }}
           private-key: ${{ secrets.app-private-key }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ inputs.tap-repository }}
