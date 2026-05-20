@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.7.1](https://github.com/luxass/shared-workflows/compare/v0.7.0...v0.7.1) (2026-05-20)
+
+
+### Bug Fixes
+
+* harden reusable homebrew tap auth and docs ([eeec003](https://github.com/luxass/shared-workflows/commit/eeec003984e8f397f5ab23e66a7859a4e2f982cd))
+* move homebrew tap app-id to workflow secret ([7a09495](https://github.com/luxass/shared-workflows/commit/7a09495ec70b6b33fbe53e3266808691c21a5e27))
+
+
+### Documentation
+
+* switch homebrew tap app-id examples back to secrets ([a5e30da](https://github.com/luxass/shared-workflows/commit/a5e30da049a1d1398c297a8a7b141141f5a18a18))
+
+
+### Miscellaneous Chores
+
+* **release-please:** remove unnecessary permissions and files ([610ced5](https://github.com/luxass/shared-workflows/commit/610ced565494330526e02819d548ab63a243b74a))
+* try fix ([506974b](https://github.com/luxass/shared-workflows/commit/506974ba15ec254363306f303951e08cbb7d1cbe))
+
 ## [0.7.0](https://github.com/luxass/shared-workflows/compare/v0.6.0...v0.7.0) (2026-05-19)
 
 
