@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.4](https://github.com/luxass/shared-workflows/compare/v0.7.3...v0.7.4) (2026-05-21)
+
+
+### Bug Fixes
+
+* require explicit targets input for homebrew tap workflow ([#35](https://github.com/luxass/shared-workflows/issues/35)) ([a38ecfc](https://github.com/luxass/shared-workflows/commit/a38ecfc3a03087a1b260f6cc5ac26261d33990f1))
+* use formula-name for release asset lookup ([#33](https://github.com/luxass/shared-workflows/issues/33)) ([bdbe8f5](https://github.com/luxass/shared-workflows/commit/bdbe8f5902ce86dd85c0d3e68f8788c15cf6db5c))
+
 ## [0.7.3](https://github.com/luxass/shared-workflows/compare/v0.7.2...v0.7.3) (2026-05-20)
 
 
