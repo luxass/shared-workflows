@@ -28,8 +28,7 @@ on:
       targets:
         description: "JSON array of targets to update checksums for"
         type: string
-        default: '["aarch64-apple-darwin", "x86_64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu"]'
-        required: false
+        required: true
     secrets:
       token:
         description: "GitHub token for tap repo access (use if not using GitHub App)"
