@@ -113,12 +113,13 @@ jobs:
         id: checksums
         env:
           TARGETS: ${{ inputs.targets }}
+          FORMULA_NAME: ${{ inputs.formula-name }}
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
 
           while IFS= read -r target; do
-            tarball="actioneer-${version}-${target}.tar.gz"
+            tarball="${FORMULA_NAME}-${version}-${target}.tar.gz"
             if [ -f "assets/${tarball}" ]; then
               sha=$(sha256sum "assets/${tarball}" | awk '{print $1}')
               echo "${target}=${sha}" >> "$GITHUB_OUTPUT"
@@ -138,10 +139,7 @@ jobs:
           FORMULA_PATH: ${{ inputs.formula-path }}
           FORMULA_NAME: ${{ inputs.formula-name }}
           TARGETS: ${{ inputs.targets }}
-          DARWIN_ARM_SHA: ${{ steps.checksums.outputs['aarch64-apple-darwin'] }}
-          DARWIN_X64_SHA: ${{ steps.checksums.outputs['x86_64-apple-darwin'] }}
-          LINUX_ARM_SHA: ${{ steps.checksums.outputs['aarch64-unknown-linux-gnu'] }}
-          LINUX_X64_SHA: ${{ steps.checksums.outputs['x86_64-unknown-linux-gnu'] }}
+          CHECKSUMS: ${{ toJSON(steps.checksums.outputs) }}
         run: |
           set -euo pipefail
           formula="tap/${FORMULA_PATH}"
@@ -152,13 +150,7 @@ jobs:
           fi
 
           while IFS= read -r target; do
-            case "$target" in
-              aarch64-apple-darwin) sha="$DARWIN_ARM_SHA" ;;
-              x86_64-apple-darwin) sha="$DARWIN_X64_SHA" ;;
-              aarch64-unknown-linux-gnu) sha="$LINUX_ARM_SHA" ;;
-              x86_64-unknown-linux-gnu) sha="$LINUX_X64_SHA" ;;
-              *) continue ;;
-            esac
+            sha=$(echo "$CHECKSUMS" | jq -r ".\"$target\" // empty")
             if [ -n "$sha" ]; then
               sed -i "s|sha256 \"[a-f0-9]\{64\}\".*# sha-update-id: ${FORMULA_NAME}-${target}|sha256 \"${sha}\" # sha-update-id: ${FORMULA_NAME}-${target}|" "$formula"
             fi
