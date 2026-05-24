@@ -101,4 +101,4 @@ sha256 "..." # sha-update-id: actioneer-x86_64-unknown-linux-gnu
 
 | Job | Description |
 | --- | --- |
-| `update-formula` | Downloads release assets, computes checksums, updates the formula, and creates a PR. |
+| `update-formula` | Downloads release assets, computes checksums, updates the formula, and creates a PR with a structured summary of updated targets and checksums. |

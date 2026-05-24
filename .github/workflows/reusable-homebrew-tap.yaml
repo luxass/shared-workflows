@@ -89,16 +89,6 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      - name: checkout release repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
-      - name: checkout release repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
       - name: download release assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -163,12 +153,11 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
           FORMULA_NAME: ${{ inputs.formula-name }}
           BASE: ${{ inputs.base-branch }}
+          TARGETS: ${{ inputs.targets }}
+          CHECKSUMS: ${{ toJSON(steps.checksums.outputs) }}
         run: |
           set -euo pipefail
           cd tap
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           branch="update-${FORMULA_NAME}-${TAG}"
           git checkout -b "$branch"
@@ -176,8 +165,31 @@ jobs:
           git commit -m "chore: update ${FORMULA_NAME} to ${TAG}"
           git push origin "$branch"
 
+          body="## Summary
+
+          Automated update of the \`${FORMULA_NAME}\` Homebrew formula to \`${TAG}\`.
+
+          ## Updated targets
+
+          | Target | SHA256 |
+          | --- | --- |"
+
+          while IFS= read -r target; do
+            sha=$(echo "$CHECKSUMS" | jq -r ".\"$target\" // empty")
+            if [ -n "$sha" ]; then
+              body="${body}
+          | \`${target}\` | \`${sha}\` |"
+            fi
+          done < <(echo "$TARGETS" | jq -r '.[]')
+
+          body="${body}
+
+          ## Links
+
+          - [Release ${TAG}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG})"
+
           gh pr create \
             --title "chore: update ${FORMULA_NAME} to ${TAG}" \
-            --body "Automated update of ${FORMULA_NAME} formula to ${TAG}" \
+            --body "$body" \
             --base "$BASE" \
             --head "$branch"
