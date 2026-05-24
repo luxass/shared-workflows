@@ -96,7 +96,7 @@ jobs:
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
           mkdir -p assets
-          gh release download "$tag" -D assets --pattern '*.tar.gz' --pattern '*.zip'
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" -D assets --pattern '*.tar.gz' --pattern '*.zip'
 
       - name: compute checksums
         id: checksums
