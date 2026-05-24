@@ -57,6 +57,8 @@ jobs:
 | `base-branch` | `string` | `main` | Base branch for the PR. |
 | `environment` | `string` | `homebrew-tap` | GitHub environment to use. |
 | `targets` | `string` | `[darwin arm/x64, linux arm/x64]` | JSON array of targets to update checksums for. |
+| `git-user-name` | `string` | `luxass-homebrew` | Git user name for the commit. |
+| `git-user-email` | `string` | `luxass-homebrew[bot]@users.noreply.github.com` | Git user email for the commit. |
 
 ## Secrets
 
