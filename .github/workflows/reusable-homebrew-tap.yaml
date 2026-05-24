@@ -116,11 +116,15 @@ jobs:
           done < <(echo "$TARGETS" | jq -r '.[]')
 
       - name: clone homebrew-tap
+        # We need to persist credentials here to be able to push the update
+        # branch later. The token is scoped with write permissions to only
+        # the tap repository to limit the blast radius in case of issues.
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ inputs.tap-repository }}
           token: ${{ secrets.token || steps.app-token.outputs.token }}
           path: tap
+          persist-credentials: true
 
       - name: update formula
         env:
