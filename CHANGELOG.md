@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2](https://github.com/luxass/shared-workflows/compare/v0.8.1...v0.8.2) (2026-05-24)
+
+
+### Bug Fixes
+
+* add --repo flag and configurable git identity for homebrew-tap ([#40](https://github.com/luxass/shared-workflows/issues/40)) ([c73809a](https://github.com/luxass/shared-workflows/commit/c73809a90c0486cec1af0afc1ec0a97c2d30b906))
+
 ## [0.8.1](https://github.com/luxass/shared-workflows/compare/v0.8.0...v0.8.1) (2026-05-24)
 
 
