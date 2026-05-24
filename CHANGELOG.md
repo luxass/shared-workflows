@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/luxass/shared-workflows/compare/v0.8.0...v0.8.1) (2026-05-24)
+
+
+### Bug Fixes
+
+* add --repo flag to gh release download ([#38](https://github.com/luxass/shared-workflows/issues/38)) ([83983ab](https://github.com/luxass/shared-workflows/commit/83983ab8d7faa882daad37476dfea9f8e90fa332))
+
 ## [0.8.0](https://github.com/luxass/shared-workflows/compare/v0.7.4...v0.8.0) (2026-05-24)
 
 
