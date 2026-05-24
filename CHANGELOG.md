@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/luxass/shared-workflows/compare/v0.7.4...v0.8.0) (2026-05-24)
+
+
+### Features
+
+* improve homebrew-tap PR body and remove git config ([#36](https://github.com/luxass/shared-workflows/issues/36)) ([41d22d1](https://github.com/luxass/shared-workflows/commit/41d22d1c69bee61672c159075fc0f0e94fd3899b))
+
 ## [0.7.4](https://github.com/luxass/shared-workflows/compare/v0.7.3...v0.7.4) (2026-05-21)
 
 
