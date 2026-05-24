@@ -91,7 +91,7 @@ jobs:
 
       - name: download release assets
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.token || steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
