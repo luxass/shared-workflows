@@ -43,7 +43,7 @@ jobs:
   ci:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.4.4
+    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.8.2
 ```
 
 Pin consumers to a release tag, for example `@v0.4.4`. For the most reproducible setup, pin to a full commit SHA.
