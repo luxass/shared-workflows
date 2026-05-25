@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/luxass/shared-workflows/compare/v0.8.2...v0.8.3) (2026-05-25)
+
+
+### Miscellaneous Chores
+
+* update docs & and fix homebrew-tap workflow ([#42](https://github.com/luxass/shared-workflows/issues/42)) ([70f18b4](https://github.com/luxass/shared-workflows/commit/70f18b48992699fdb4ff9b29e0f7578ca2369398))
+
 ## [0.8.2](https://github.com/luxass/shared-workflows/compare/v0.8.1...v0.8.2) (2026-05-24)
 
 
