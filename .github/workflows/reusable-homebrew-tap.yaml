@@ -116,6 +116,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
+          version="${version#*@}"
 
           while IFS= read -r target; do
             tarball="${FORMULA_NAME}-${version}-${target}.tar.gz"
@@ -146,6 +147,8 @@ jobs:
         run: |
           set -euo pipefail
           formula="tap/${FORMULA_PATH}"
+          version="${VERSION#v}"
+          version="${version#*@}"
 
           if [ ! -f "$formula" ]; then
             echo "Formula not found at ${formula}" >&2
@@ -159,7 +162,7 @@ jobs:
             fi
           done < <(echo "$TARGETS" | jq -r '.[]')
 
-          sed -i "s|version \".*\"|version \"${VERSION#v}\"|" "$formula"
+          sed -i "s|version \".*\"|version \"${version}\"|" "$formula"
 
       - name: create pr
         env:
@@ -175,17 +178,19 @@ jobs:
           set -euo pipefail
           cd tap
 
-          branch="update-${FORMULA_NAME}-${TAG}"
+          version="${TAG#v}"
+          version="${version#*@}"
+          branch="update-${FORMULA_NAME}-${version}"
           git checkout -b "$branch"
           git config user.email "$GIT_USER_EMAIL"
           git config user.name "$GIT_USER_NAME"
           git add -A
-          git commit -m "chore: update ${FORMULA_NAME} to ${TAG}"
+          git commit -m "chore: update ${FORMULA_NAME} to ${version}"
           git push origin "$branch"
 
           body="## Summary
 
-          Automated update of the \`${FORMULA_NAME}\` Homebrew formula to \`${TAG}\`.
+          Automated update of the \`${FORMULA_NAME}\` Homebrew formula to \`${version}\`.
 
           ## Updated targets
 
@@ -207,7 +212,7 @@ jobs:
           - [Release ${TAG}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG})"
 
           gh pr create \
-            --title "chore: update ${FORMULA_NAME} to ${TAG}" \
+            --title "chore: update ${FORMULA_NAME} to ${version}" \
             --body "$body" \
             --base "$BASE" \
             --head "$branch"
