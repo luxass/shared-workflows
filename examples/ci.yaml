@@ -15,4 +15,4 @@ jobs:
   ci:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.8.2 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.8.3 # x-release-please-version
