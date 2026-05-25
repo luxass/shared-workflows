@@ -36,7 +36,7 @@ jobs:
       contents: read
       security-events: write
       id-token: write
-    uses: luxass/shared-workflows/.github/workflows/reusable-ci-security.yaml@v0.7.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-ci-security.yaml@v0.8.2
 ```
 
 ## With Custom Arguments
@@ -49,7 +49,7 @@ jobs:
       contents: read
       security-events: write
       id-token: write
-    uses: luxass/shared-workflows/.github/workflows/reusable-ci-security.yaml@v0.7.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-ci-security.yaml@v0.8.2
     with:
       min-severity: medium
       min-confidence: medium

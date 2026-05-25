@@ -26,7 +26,7 @@ jobs:
   ci:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.7.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.8.2
 ```
 
 ## With Custom Scripts
@@ -36,7 +36,7 @@ jobs:
   ci:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.7.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.8.2
     with:
       node-version: 22
       build-script: "build"

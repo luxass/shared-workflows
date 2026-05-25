@@ -46,7 +46,7 @@ External consumers should call a pinned ref:
 ```yaml
 jobs:
   ci:
-    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.4.4
+    uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.8.2
 ```
 
 Do not mix `workflow_call` with normal triggers in the same workflow. Keeping reusable workflows separate from repository workflows makes `inputs`, permissions, and documentation easier to reason about.
@@ -133,10 +133,10 @@ uses: actions/checkout@v6
 Internal reusable workflow examples should use release tags so consumers can copy them:
 
 ```yaml
-uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.4.4 # x-release-please-version
+uses: luxass/shared-workflows/.github/workflows/reusable-ci.yaml@v0.8.2
 ```
 
-Keep the `# x-release-please-version` marker on example `uses:` lines that Release Please should update.
+Release Please automatically updates these version references.
 
 ## Secrets And Tokens
 
