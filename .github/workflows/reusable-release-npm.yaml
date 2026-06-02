@@ -43,6 +43,11 @@ on:
         type: string
         default: ""
         required: false
+      stage:
+        description: "Use pnpm stage publish instead of pnpm publish"
+        type: boolean
+        default: false
+        required: false
 
 permissions: {}
 
@@ -100,7 +105,17 @@ jobs:
             echo "tag=latest" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: publish to npm (staging)
+        if: ${{ inputs.stage }}
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          NPM_CONFIG_PROVENANCE: "true"
+          PUBLISH_ARGS: ${{ inputs.publish-args }}
+          RECURSIVE: ${{ inputs.recursive }}
+        run: pnpm stage publish ${{ env.RECURSIVE == 'true' && '-r' || '' }} --tag "$TAG" $PUBLISH_ARGS
+
       - name: publish to npm
+        if: ${{ !inputs.stage }}
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           NPM_CONFIG_PROVENANCE: "true"
