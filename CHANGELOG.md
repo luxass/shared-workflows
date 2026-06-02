@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/luxass/shared-workflows/compare/v0.8.3...v0.9.0) (2026-06-02)
+
+
+### Features
+
+* **npm:** add support for staged publishing with pnpm ([#44](https://github.com/luxass/shared-workflows/issues/44)) ([f070798](https://github.com/luxass/shared-workflows/commit/f070798a83cd6110b40bde90d41086c0170db453))
+
 ## [0.8.3](https://github.com/luxass/shared-workflows/compare/v0.8.2...v0.8.3) (2026-05-25)
 
 
