@@ -86,6 +86,11 @@ The workflow uses `git describe --tags --abbrev=0` to find the latest tag:
 
 When `stage: true` is passed, the workflow uses `pnpm stage publish` instead of `pnpm publish`. This enables npm's staged publishing workflow, which uploads to staging and defers proof-of-presence (2FA) to a later point. This is useful for verifying release artifacts or smoke-testing before approving the final release to the live registry.
 
+Version requirements for staged publishing:
+
+- `pnpm >= 11.3.0` (required for `pnpm stage publish`)
+- `Node.js >= 22.14.0` and `npm CLI >= 11.15.0` (required for npm staged publishing)
+
 To use staged publishing:
 
 ```yaml
