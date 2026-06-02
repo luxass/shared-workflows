@@ -54,6 +54,7 @@ jobs:
 | `publish-args` | `string` | `--access public --no-git-checks` | Additional arguments passed to `pnpm publish`. |
 | `generate-changelog` | `boolean` | `true` | Generate a GitHub release changelog with `changelogithub`. |
 | `install-args` | `string` | `""` | Additional arguments passed to `pnpm install`. |
+| `stage` | `boolean` | `false` | Use `pnpm stage publish` for npm's staged publishing workflow instead of direct publishing. |
 
 ## Secrets
 
@@ -80,6 +81,29 @@ The workflow uses `git describe --tags --abbrev=0` to find the latest tag:
 
 - Tags containing `-` publish with the `next` dist-tag.
 - Other tags publish with the `latest` dist-tag.
+
+## Staged Publishing
+
+When `stage: true` is passed, the workflow uses `pnpm stage publish` instead of `pnpm publish`. This enables npm's staged publishing workflow, which uploads to staging and defers proof-of-presence (2FA) to a later point. This is useful for verifying release artifacts or smoke-testing before approving the final release to the live registry.
+
+Version requirements for staged publishing:
+
+- `pnpm >= 11.3.0` (required for `pnpm stage publish`)
+- `Node.js >= 22.14.0` and `npm CLI >= 11.15.0` (required for npm staged publishing)
+
+To use staged publishing:
+
+```yaml
+jobs:
+  release:
+    permissions:
+      id-token: write
+      contents: write
+    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.8.2
+    with:
+      stage: true
+    secrets: inherit
+```
 
 ## Jobs
 
