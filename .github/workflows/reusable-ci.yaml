@@ -116,30 +116,30 @@ jobs:
 
       - name: build
         if: ${{ inputs.build }}
-        env:
-          BUILD_SCRIPT: ${{ inputs.build-script }}
-        run: pnpm $BUILD_SCRIPT
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: ${{ inputs.build-script }}
 
       - name: post-build
         if: ${{ inputs.build && inputs.post-build-script != '' }}
-        env:
-          POST_BUILD_SCRIPT: ${{ inputs.post-build-script }}
-        run: pnpm $POST_BUILD_SCRIPT
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: ${{ inputs.post-build-script }}
 
       - name: lint
         if: ${{ inputs.lint }}
-        env:
-          LINT_SCRIPT: ${{ inputs.lint-script }}
-        run: pnpm $LINT_SCRIPT
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: ${{ inputs.lint-script }}
 
       - name: fmt
         if: ${{ inputs.fmt }}
-        env:
-          FMT_SCRIPT: ${{ inputs.fmt-script }}
-        run: pnpm $FMT_SCRIPT
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: ${{ inputs.fmt-script }}
 
       - name: typecheck
         if: ${{ inputs.typecheck }}
-        env:
-          TYPECHECK_SCRIPT: ${{ inputs.typecheck-script }}
-        run: pnpm $TYPECHECK_SCRIPT
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: ${{ inputs.typecheck-script }}

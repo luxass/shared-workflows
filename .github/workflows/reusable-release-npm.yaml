@@ -84,15 +84,15 @@ jobs:
         run: pnpx changelogithub
 
       - name: install dependencies
-        env:
-          INSTALL_ARGS: ${{ inputs.install-args }}
-        run: pnpm install --frozen-lockfile $INSTALL_ARGS
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: install --frozen-lockfile ${{ inputs.install-args }}
 
       - name: build
         if: ${{ inputs.build }}
-        env:
-          BUILD_SCRIPT: ${{ inputs.build-script }}
-        run: pnpm $BUILD_SCRIPT
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: ${{ inputs.build-script }}
 
       - name: detect tag
         id: tag
@@ -108,17 +108,15 @@ jobs:
       - name: publish to npm (staging)
         if: ${{ inputs.stage }}
         env:
-          TAG: ${{ steps.tag.outputs.tag }}
           NPM_CONFIG_PROVENANCE: "true"
-          PUBLISH_ARGS: ${{ inputs.publish-args }}
-          RECURSIVE: ${{ inputs.recursive }}
-        run: pnpm stage publish ${{ env.RECURSIVE == 'true' && '-r' || '' }} --tag "$TAG" $PUBLISH_ARGS
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: stage publish ${{ inputs.recursive && '-r' || '' }} --tag ${{ steps.tag.outputs.tag }} ${{ inputs.publish-args }}
 
       - name: publish to npm
         if: ${{ !inputs.stage }}
         env:
-          TAG: ${{ steps.tag.outputs.tag }}
           NPM_CONFIG_PROVENANCE: "true"
-          PUBLISH_ARGS: ${{ inputs.publish-args }}
-          RECURSIVE: ${{ inputs.recursive }}
-        run: pnpm publish ${{ env.RECURSIVE == 'true' && '-r' || '' }} --tag "$TAG" $PUBLISH_ARGS
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: publish ${{ inputs.recursive && '-r' || '' }} --tag ${{ steps.tag.outputs.tag }} ${{ inputs.publish-args }}

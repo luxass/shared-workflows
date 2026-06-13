@@ -102,16 +102,16 @@ jobs:
           pnpm add -Dw "$TOOL_NAME@$TOOL_VERSION"
 
       - name: build
-        env:
-          BUILD_SCRIPT: ${{ inputs.build-script }}
-        run: pnpm $BUILD_SCRIPT
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: ${{ inputs.build-script }}
 
       - name: test
-        env:
-          TEST_SCRIPT: ${{ inputs.test-script }}
-        run: pnpm $TEST_SCRIPT
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: ${{ inputs.test-script }}
 
       - name: typecheck
-        env:
-          TYPECHECK_SCRIPT: ${{ inputs.typecheck-script }}
-        run: pnpm $TYPECHECK_SCRIPT
+        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        with:
+          args: ${{ inputs.typecheck-script }}
