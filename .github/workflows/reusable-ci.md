@@ -89,3 +89,5 @@ The caller job should grant `contents: read` because the reusable workflow check
 | Job | Description |
 | --- | --- |
 | `ci` | Runs setup, then the enabled `pnpm` commands. |
+
+The build, post-build, lint, fmt, and typecheck script inputs are passed to `pnpm` through `actions/run-pnpm` without shell re-interpretation.

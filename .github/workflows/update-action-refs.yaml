@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "actions/setup/v*"
+      - "actions/run-pnpm/v*"
 
 permissions: {}
 
@@ -44,19 +45,22 @@ jobs:
           TAG_REF: ${{ github.ref_name }}
           TAG_SHA: ${{ github.sha }}
         run: |
+          ACTION_PATH="${TAG_REF%/v*}"
           echo "tag=${TAG_REF}" >> "$GITHUB_OUTPUT"
           echo "sha=${TAG_SHA}" >> "$GITHUB_OUTPUT"
+          echo "action_path=${ACTION_PATH}" >> "$GITHUB_OUTPUT"
 
       - name: find and update workflow references
         id: update
         env:
           NEW_SHA: ${{ steps.resolve.outputs.sha }}
           NEW_TAG: ${{ steps.resolve.outputs.tag }}
+          ACTION_PATH: ${{ steps.resolve.outputs.action_path }}
         run: |
-          FILES=$(grep -rl "uses: luxass/shared-workflows/actions/setup@" .github/workflows/ --exclude="update-action-refs.yaml" || true)
+          FILES=$(grep -rl "uses: luxass/shared-workflows/${ACTION_PATH}@" .github/workflows/ actions/ --include="*.yaml" --exclude="update-action-refs.yaml" || true)
 
           if [ -z "$FILES" ]; then
-            echo "No workflow files reference actions/setup"
+            echo "No workflow files reference ${ACTION_PATH}"
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -64,7 +68,7 @@ jobs:
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
           for file in $FILES; do
-            sed -i "s|uses: luxass/shared-workflows/actions/setup@[a-f0-9]\{40\}.*|uses: luxass/shared-workflows/actions/setup@${NEW_SHA} # ${NEW_TAG}|" "$file"
+            sed -i "s|uses: luxass/shared-workflows/${ACTION_PATH}@[a-f0-9]\{40\}.*|uses: luxass/shared-workflows/${ACTION_PATH}@${NEW_SHA} # ${NEW_TAG}|" "$file"
           done
 
           {
@@ -77,7 +81,7 @@ jobs:
         if: steps.update.outputs.changed == 'true'
         id: diff
         run: |
-          DIFF=$(git diff .github/workflows/)
+          DIFF=$(git diff .github/workflows/ actions/)
           {
             echo "content<<DIFF_EOF"
             echo "$DIFF"
@@ -90,13 +94,14 @@ jobs:
         env:
           TAG: ${{ steps.resolve.outputs.tag }}
           SHA: ${{ steps.resolve.outputs.sha }}
+          ACTION_PATH: ${{ steps.resolve.outputs.action_path }}
           DIFF: ${{ steps.diff.outputs.content }}
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit-message: "chore(deps): update actions/setup to ${{ steps.resolve.outputs.tag }}"
-          title: "chore(deps): update actions/setup to ${{ steps.resolve.outputs.tag }}"
+          commit-message: "chore(deps): update ${{ steps.resolve.outputs.action_path }} to ${{ steps.resolve.outputs.tag }}"
+          title: "chore(deps): update ${{ steps.resolve.outputs.action_path }} to ${{ steps.resolve.outputs.tag }}"
           body: |
-            Updates `actions/setup` references to SHA-pinned [`${{ env.TAG }}`](https://github.com/${{ github.repository }}/tree/${{ env.TAG }}).
+            Updates `${{ env.ACTION_PATH }}` references to SHA-pinned [`${{ env.TAG }}`](https://github.com/${{ github.repository }}/tree/${{ env.TAG }}).
 
             |         |                  |
             | ------- | ---------------- |
@@ -109,7 +114,9 @@ jobs:
             ${{ env.DIFF }}
             ```
           branch: "chore/update-action-refs"
-          add-paths: .github/workflows/
+          add-paths: |
+            .github/workflows/
+            actions/
           base: main
           committer: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
           author: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"

@@ -110,3 +110,5 @@ jobs:
 | Job | Description |
 | --- | --- |
 | `release` | Builds and publishes the package or workspace packages to npm. |
+
+The install, build, and publish arguments are passed to `pnpm` through `actions/run-pnpm` without shell re-interpretation.
