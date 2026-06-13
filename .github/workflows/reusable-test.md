@@ -78,3 +78,5 @@ The caller job should grant `contents: read` because the reusable workflow check
 | Job | Description |
 | --- | --- |
 | `test` | Runs setup, then runs the configured `pnpm` test command. |
+
+The test script input is passed to `pnpm` through `actions/run-pnpm` without shell re-interpretation.
