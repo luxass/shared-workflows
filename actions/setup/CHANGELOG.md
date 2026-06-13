@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/luxass/shared-workflows/compare/actions/setup/v0.1.3...actions/setup/v0.1.4) (2026-06-13)
+
+
+### Miscellaneous Chores
+
+* **deps:** update actions/run-pnpm to actions/run-pnpm/v0.2.1 ([#57](https://github.com/luxass/shared-workflows/issues/57)) ([ab4cd55](https://github.com/luxass/shared-workflows/commit/ab4cd55c3c0cc5b031ec2601666f3d913284696e))
+
 ## [0.1.3](https://github.com/luxass/shared-workflows/compare/actions/setup/v0.1.2...actions/setup/v0.1.3) (2026-06-13)
 
 
