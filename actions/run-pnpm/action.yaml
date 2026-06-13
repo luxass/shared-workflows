@@ -1,5 +1,5 @@
 name: "Run pnpm"
-description: "Run pnpm with caller-provided arguments without shell re-interpretation"
+description: "Run pnpm with whitespace-delimited caller-provided arguments without shell re-interpretation"
 
 inputs:
   args:
