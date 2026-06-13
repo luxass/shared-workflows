@@ -75,6 +75,6 @@ jobs:
           install-args: ${{ inputs.install-args }}
 
       - name: test
-        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        uses: luxass/shared-workflows/actions/run-pnpm@82c9e3625f7959ea6b3ddd2014a8a095a269e8f7 # actions/run-pnpm/v0.2.1
         with:
           args: ${{ inputs.test-script }}
