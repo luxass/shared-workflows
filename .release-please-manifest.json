@@ -1,4 +1,5 @@
 {
   ".": "0.9.0",
-  "actions/setup": "0.1.1"
+  "actions/setup": "0.1.1",
+  "actions/run-pnpm": "0.1.0"
 }
