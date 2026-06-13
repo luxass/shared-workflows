@@ -104,14 +104,23 @@ jobs:
       - name: build
         env:
           BUILD_SCRIPT: ${{ inputs.build-script }}
-        run: pnpm $BUILD_SCRIPT
+        run: |
+          set -euo pipefail
+          read -r -a args <<< "$BUILD_SCRIPT"
+          pnpm "${args[@]}"
 
       - name: test
         env:
           TEST_SCRIPT: ${{ inputs.test-script }}
-        run: pnpm $TEST_SCRIPT
+        run: |
+          set -euo pipefail
+          read -r -a args <<< "$TEST_SCRIPT"
+          pnpm "${args[@]}"
 
       - name: typecheck
         env:
           TYPECHECK_SCRIPT: ${{ inputs.typecheck-script }}
-        run: pnpm $TYPECHECK_SCRIPT
+        run: |
+          set -euo pipefail
+          read -r -a args <<< "$TYPECHECK_SCRIPT"
+          pnpm "${args[@]}"
