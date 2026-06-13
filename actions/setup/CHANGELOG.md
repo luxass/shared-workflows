@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/luxass/shared-workflows/compare/actions/setup/v0.1.2...actions/setup/v0.1.3) (2026-06-13)
+
+
+### Bug Fixes
+
+* clarify action pnpm argument handling ([#53](https://github.com/luxass/shared-workflows/issues/53)) ([f836e24](https://github.com/luxass/shared-workflows/commit/f836e24e26001e79ba6faa8200421c0f9b2c10bb))
+
 ## [0.1.2](https://github.com/luxass/shared-workflows/compare/actions/setup/v0.1.1...actions/setup/v0.1.2) (2026-06-13)
 
 
