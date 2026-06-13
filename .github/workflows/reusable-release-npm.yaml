@@ -84,13 +84,13 @@ jobs:
         run: pnpx changelogithub
 
       - name: install dependencies
-        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        uses: luxass/shared-workflows/actions/run-pnpm@82c9e3625f7959ea6b3ddd2014a8a095a269e8f7 # actions/run-pnpm/v0.2.1
         with:
           args: install --frozen-lockfile ${{ inputs.install-args }}
 
       - name: build
         if: ${{ inputs.build }}
-        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        uses: luxass/shared-workflows/actions/run-pnpm@82c9e3625f7959ea6b3ddd2014a8a095a269e8f7 # actions/run-pnpm/v0.2.1
         with:
           args: ${{ inputs.build-script }}
 
@@ -109,7 +109,7 @@ jobs:
         if: ${{ inputs.stage }}
         env:
           NPM_CONFIG_PROVENANCE: "true"
-        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        uses: luxass/shared-workflows/actions/run-pnpm@82c9e3625f7959ea6b3ddd2014a8a095a269e8f7 # actions/run-pnpm/v0.2.1
         with:
           args: stage publish ${{ inputs.recursive && '-r' || '' }} --tag ${{ steps.tag.outputs.tag }} ${{ inputs.publish-args }}
 
@@ -117,6 +117,6 @@ jobs:
         if: ${{ !inputs.stage }}
         env:
           NPM_CONFIG_PROVENANCE: "true"
-        uses: luxass/shared-workflows/actions/run-pnpm@b735646b0a4a26710ba55662e060fc6c45560ed8 # unreleased
+        uses: luxass/shared-workflows/actions/run-pnpm@82c9e3625f7959ea6b3ddd2014a8a095a269e8f7 # actions/run-pnpm/v0.2.1
         with:
           args: publish ${{ inputs.recursive && '-r' || '' }} --tag ${{ steps.tag.outputs.tag }} ${{ inputs.publish-args }}
