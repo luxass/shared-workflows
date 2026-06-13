@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.10.0](https://github.com/luxass/shared-workflows/compare/v0.9.0...v0.10.0) (2026-06-13)
+
+
+### Features
+
+* add run pnpm action ([#48](https://github.com/luxass/shared-workflows/issues/48)) ([b735646](https://github.com/luxass/shared-workflows/commit/b735646b0a4a26710ba55662e060fc6c45560ed8))
+* add test build tools workflow ([#46](https://github.com/luxass/shared-workflows/issues/46)) ([74f8ae0](https://github.com/luxass/shared-workflows/commit/74f8ae035a509aba14e508d40e0dd080ca0809f6))
+
+
+### Bug Fixes
+
+* clarify action pnpm argument handling ([#53](https://github.com/luxass/shared-workflows/issues/53)) ([f836e24](https://github.com/luxass/shared-workflows/commit/f836e24e26001e79ba6faa8200421c0f9b2c10bb))
+* run pnpm arguments through action ([#50](https://github.com/luxass/shared-workflows/issues/50)) ([34943c7](https://github.com/luxass/shared-workflows/commit/34943c7ab1e7e76cd45782948abde4fa0f9c4745))
+
+
+### Miscellaneous Chores
+
+* **deps:** update actions/run-pnpm to actions/run-pnpm/v0.2.1 ([#57](https://github.com/luxass/shared-workflows/issues/57)) ([ab4cd55](https://github.com/luxass/shared-workflows/commit/ab4cd55c3c0cc5b031ec2601666f3d913284696e))
+* **deps:** update actions/setup to actions/setup/v0.1.3 ([#56](https://github.com/luxass/shared-workflows/issues/56)) ([fd6478d](https://github.com/luxass/shared-workflows/commit/fd6478d67878f62b5a2a0da6122c10a42dbbb59a))
+* **deps:** update actions/setup to actions/setup/v0.1.4 ([#59](https://github.com/luxass/shared-workflows/issues/59)) ([b32583c](https://github.com/luxass/shared-workflows/commit/b32583c39391b9aa2da30fcb4ecd82fb7331e2da))
+* **main:** release actions/run-pnpm 0.2.0 ([#49](https://github.com/luxass/shared-workflows/issues/49)) ([1cc2542](https://github.com/luxass/shared-workflows/commit/1cc25427eeee2175bec68b20e327484274db6cca))
+* **main:** release actions/run-pnpm 0.2.1 ([#54](https://github.com/luxass/shared-workflows/issues/54)) ([82c9e36](https://github.com/luxass/shared-workflows/commit/82c9e3625f7959ea6b3ddd2014a8a095a269e8f7))
+* **main:** release actions/setup 0.1.2 ([#51](https://github.com/luxass/shared-workflows/issues/51)) ([3c589ec](https://github.com/luxass/shared-workflows/commit/3c589ec3ec8885781f89c8be98927640fab2d72f))
+* **main:** release actions/setup 0.1.3 ([#55](https://github.com/luxass/shared-workflows/issues/55)) ([22f7911](https://github.com/luxass/shared-workflows/commit/22f7911933909a88a0b65c1b4811b5c4fbf83ecd))
+* **main:** release actions/setup 0.1.4 ([#58](https://github.com/luxass/shared-workflows/issues/58)) ([2520d02](https://github.com/luxass/shared-workflows/commit/2520d029851a66658648ad5649ba3d328e8b2763))
+* **update-action-refs:** add write permission for workflows ([#52](https://github.com/luxass/shared-workflows/issues/52)) ([261f83c](https://github.com/luxass/shared-workflows/commit/261f83cef5ff89a077c256bffac777995faffc84))
+
 ## [0.9.0](https://github.com/luxass/shared-workflows/compare/v0.8.3...v0.9.0) (2026-06-02)
 
 
