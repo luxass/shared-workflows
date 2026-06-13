@@ -94,4 +94,4 @@ The caller job should grant `contents: read` because the reusable workflow check
 
 The workflow modifies the checked out workspace by adding the selected build tool package before running commands. It does not commit or upload those changes.
 
-The build, test, and typecheck inputs are split on shell whitespace and passed as arguments to `pnpm` without shell re-interpretation.
+The build, test, and typecheck inputs are passed as arguments to `pnpm`, so callers should only pass trusted command names or arguments.
