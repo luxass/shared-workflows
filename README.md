@@ -19,6 +19,7 @@ Each reusable workflow has its own documentation with inputs, secrets, permissio
 | Action | Description |
 | :----- | :---------- |
 | [actions/setup](actions/setup/action.yaml) | Checks out the repository, sets up pnpm and Node.js, and installs dependencies. |
+| [actions/run-pnpm](actions/run-pnpm/action.yaml) | Runs pnpm with caller-provided arguments without shell re-interpretation. |
 
 ## How To Use A Shared Workflow
 

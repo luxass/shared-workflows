@@ -1,0 +1,19 @@
+name: "Run pnpm"
+description: "Run pnpm with caller-provided arguments without shell re-interpretation"
+
+inputs:
+  args:
+    description: "Whitespace-delimited arguments passed to pnpm"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: run pnpm
+      shell: bash
+      env:
+        PNPM_ARGS: ${{ inputs.args }}
+      run: |
+        set -euo pipefail
+        read -r -a args <<< "$PNPM_ARGS"
+        pnpm "${args[@]}"
