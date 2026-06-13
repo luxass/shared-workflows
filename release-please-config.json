@@ -21,6 +21,7 @@
       "extra-files": [
         { "type": "generic", "path": "examples/ci.yaml" },
         { "type": "generic", "path": "examples/test.yaml" },
+        { "type": "generic", "path": "examples/test-build-tools.yaml" },
         { "type": "generic", "path": "examples/ci-security.yaml" },
         { "type": "generic", "path": "examples/release-npm.yaml" },
         { "type": "generic", "path": "examples/homebrew-tap.yaml" }
