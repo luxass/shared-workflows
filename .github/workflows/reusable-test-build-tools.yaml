@@ -1,0 +1,117 @@
+name: Test Build Tools
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        type: string
+        default: "lts/*"
+        required: false
+      tool-name:
+        description: "Build tool package name to install"
+        type: string
+        required: true
+      tool-version:
+        description: "Build tool package version or dist-tag to install"
+        type: string
+        required: true
+      persist-credentials:
+        description: "Whether to persist git credentials after checkout"
+        type: boolean
+        default: false
+        required: false
+      fetch-depth:
+        description: "Number of commits to fetch (0 for full history)"
+        type: number
+        default: 1
+        required: false
+      submodules:
+        description: "Whether to checkout submodules: `true` to checkout submodules or `recursive` to recursively checkout submodules"
+        type: string
+        default: "false"
+        required: false
+      node-version-file:
+        description: "File containing the version spec (e.g. .nvmrc, .node-version, package.json)"
+        type: string
+        default: ""
+        required: false
+      registry-url:
+        description: "Registry URL to configure for authentication (e.g. https://npm.pkg.github.com)"
+        type: string
+        default: ""
+        required: false
+      scope:
+        description: "Scope for authenticating against scoped registries (e.g. @myorg)"
+        type: string
+        default: ""
+        required: false
+      install-args:
+        description: "Additional arguments to pass to pnpm install"
+        type: string
+        default: ""
+        required: false
+      build-script:
+        description: "Arguments passed to pnpm for the build step"
+        type: string
+        default: "build"
+        required: false
+      test-script:
+        description: "Arguments passed to pnpm for the test step"
+        type: string
+        default: "test"
+        required: false
+      typecheck-script:
+        description: "Arguments passed to pnpm for the typecheck step"
+        type: string
+        default: "typecheck"
+        required: false
+    secrets:
+      token:
+        description: "GitHub token to use for checkout (defaults to GITHUB_TOKEN)"
+        required: false
+
+permissions: {}
+
+jobs:
+  test-build-tools:
+    name: ${{ inputs.tool-name }}@${{ inputs.tool-version }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: setup
+        uses: luxass/shared-workflows/actions/setup@36ff555d8540defbb303af3e544ed1bad1848fe4 # v0.4.4
+        with:
+          node-version: ${{ inputs.node-version }}
+          node-version-file: ${{ inputs.node-version-file }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+          token: ${{ secrets.token || github.token }}
+          persist-credentials: ${{ inputs.persist-credentials }}
+          fetch-depth: ${{ inputs.fetch-depth }}
+          submodules: ${{ inputs.submodules }}
+          install-args: ${{ inputs.install-args }}
+
+      - name: install build tool
+        env:
+          TOOL_NAME: ${{ inputs.tool-name }}
+          TOOL_VERSION: ${{ inputs.tool-version }}
+        run: |
+          set -euo pipefail
+          pnpm add -Dw "$TOOL_NAME@$TOOL_VERSION"
+
+      - name: build
+        env:
+          BUILD_SCRIPT: ${{ inputs.build-script }}
+        run: pnpm $BUILD_SCRIPT
+
+      - name: test
+        env:
+          TEST_SCRIPT: ${{ inputs.test-script }}
+        run: pnpm $TEST_SCRIPT
+
+      - name: typecheck
+        env:
+          TYPECHECK_SCRIPT: ${{ inputs.typecheck-script }}
+        run: pnpm $TYPECHECK_SCRIPT
