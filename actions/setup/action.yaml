@@ -1,5 +1,5 @@
 name: "Setup"
-description: "Checkout, setup pnpm, setup Node.js, and install dependencies"
+description: "Checkout, setup pnpm, setup Node.js, and install dependencies with safe pnpm argument handling"
 
 inputs:
   # checkout inputs
