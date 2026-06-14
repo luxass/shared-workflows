@@ -45,7 +45,7 @@ jobs:
           - { name: vite, version: 6.0.2 }
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-test-build-tools.yaml@v0.10.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-test-build-tools.yaml@v0.11.0 # x-release-please-version
     with:
       tool-name: ${{ matrix.tool.name }}
       tool-version: ${{ matrix.tool.version }}
