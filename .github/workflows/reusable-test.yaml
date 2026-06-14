@@ -43,10 +43,20 @@ on:
         type: string
         default: ""
         required: false
+      pre-test-script:
+        description: "Arguments passed to pnpm before the test step"
+        type: string
+        default: ""
+        required: false
       test-script:
         description: "Arguments passed to pnpm for the test step"
         type: string
         default: "test"
+        required: false
+      post-test-script:
+        description: "Arguments passed to pnpm after the test step"
+        type: string
+        default: ""
         required: false
     secrets:
       token:
@@ -74,7 +84,19 @@ jobs:
           submodules: ${{ inputs.submodules }}
           install-args: ${{ inputs.install-args }}
 
+      - name: pre-test
+        if: ${{ inputs.pre-test-script != '' }}
+        uses: luxass/shared-workflows/actions/run-pnpm@82c9e3625f7959ea6b3ddd2014a8a095a269e8f7 # actions/run-pnpm/v0.2.1
+        with:
+          args: ${{ inputs.pre-test-script }}
+
       - name: test
         uses: luxass/shared-workflows/actions/run-pnpm@82c9e3625f7959ea6b3ddd2014a8a095a269e8f7 # actions/run-pnpm/v0.2.1
         with:
           args: ${{ inputs.test-script }}
+
+      - name: post-test
+        if: ${{ inputs.post-test-script != '' }}
+        uses: luxass/shared-workflows/actions/run-pnpm@82c9e3625f7959ea6b3ddd2014a8a095a269e8f7 # actions/run-pnpm/v0.2.1
+        with:
+          args: ${{ inputs.post-test-script }}
