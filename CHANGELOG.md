@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/luxass/shared-workflows/compare/v0.10.0...v0.11.0) (2026-06-14)
+
+
+### Features
+
+* **test:** add pre and post test scripts ([#60](https://github.com/luxass/shared-workflows/issues/60)) ([aa0cc75](https://github.com/luxass/shared-workflows/commit/aa0cc752ed69ffb5b8bbe4085e5cede0f15259d5))
+
 ## [0.10.0](https://github.com/luxass/shared-workflows/compare/v0.9.0...v0.10.0) (2026-06-13)
 
 
