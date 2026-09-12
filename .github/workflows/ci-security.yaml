@@ -23,4 +23,4 @@ jobs:
       contents: read
       security-events: write
       id-token: write
-    uses: ./.github/workflows/reusable-ci-security.yaml
+    uses: ./.github/workflows/reusable-ci-security.yaml # zizmor: ignore[self-repository] local wrapper for the reusable workflow in the same repo
