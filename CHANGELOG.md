@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.2](https://github.com/luxass/shared-workflows/compare/v0.11.1...v0.11.2) (2026-09-12)
+
+
+### Miscellaneous Chores
+
+* **release:** remove npm update step ([#69](https://github.com/luxass/shared-workflows/issues/69)) ([cb34f2b](https://github.com/luxass/shared-workflows/commit/cb34f2bc43adafb65736235780bf8cbe44450848))
+* **security:** suppress by-design zizmor findings, refresh workflow skill ([#71](https://github.com/luxass/shared-workflows/issues/71)) ([741a895](https://github.com/luxass/shared-workflows/commit/741a895e47cb3f9006234a7444f72354c31f8dd6))
+
 ## [0.11.1](https://github.com/luxass/shared-workflows/compare/v0.11.0...v0.11.1) (2026-09-12)
 
 
