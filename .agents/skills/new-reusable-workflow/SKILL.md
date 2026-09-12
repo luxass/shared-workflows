@@ -1,20 +1,11 @@
 ---
 name: new-reusable-workflow
-description: Scaffold a new reusable GitHub Actions workflow following repository conventions. Use when creating/adding a new reusable workflow, or when the user says "create workflow", "add workflow", "new reusable workflow".
+description: Scaffold a reusable-*.yaml workflow in this repo. Use when adding a new reusable workflow.
 ---
 
 # New Reusable Workflow
 
-Scaffold a `reusable-*.yaml` workflow that follows AGENTS.md conventions.
-
-## Workflow
-
-1. **Clarify the workflow purpose** - what does it do, what jobs/steps are needed
-2. **Define the public API** - inputs, secrets, outputs with descriptions, types, defaults
-3. **Generate the workflow** using the template below
-4. **Create sibling docs** - `reusable-<name>.md` with usage, inputs, secrets, permissions
-5. **Add/update example** in `examples/` with correct permissions
-6. **Add to release-please-config.json** - add the new workflow path to the `extra-files` array so Release Please updates its version tag in examples
+Scaffold a `reusable-*.yaml` workflow. AGENTS.md is the authority on conventions; below is the template plus the checklist that matters.
 
 ## Template
 
@@ -43,12 +34,12 @@ jobs:
       contents: read
     steps:
       - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: setup
-        uses: luxass/shared-workflows/actions/setup@36ff555d8540defbb303af3e544ed1bad1848fe4 # v0.4.4
+        uses: luxass/shared-workflows/actions/setup@3a2dc4e52b786682a0f0fba65eca46b49b7b5c8b # actions/setup/v0.1.5
 
       # ... workflow steps
 
@@ -60,39 +51,13 @@ jobs:
           <command>
 ```
 
-## Rules
+## Checklist
 
-- Filename: `reusable-<name>.yaml`
-- Top-level `permissions: {}` always
-- Job-level `permissions:` only as needed, minimal
+- Filename `reusable-<name>.yaml`, `on.workflow_call` only, top-level `permissions: {}` always
+- Sibling `reusable-<name>.md`: usage, inputs/secrets tables, required caller permissions, jobs and behavior
+- Copyable example in `examples/` with minimal caller permissions and `# x-release-please-version`, registered in `release-please-config.json` `extra-files`
 - Pin third-party actions to commit SHAs with version comments
-- Use `persist-credentials: false` on checkout
-- Put caller-controlled values in env vars before shell use
-- `set -euo pipefail` in all multi-line shell scripts
-- No `pull_request_target` triggers
-- Inputs/secrets must have descriptions
-- For GitHub App auth examples, prefer mapping both `app-id` and `app-private-key` from caller secrets for consistency
-- Follow the existing repo patterns (pnpm, actions/setup, etc.)
-
-## Sibling doc structure
-
-Create `reusable-<name>.md` covering:
-
-- What the workflow does
-- Usage example
-- Inputs table (name, type, default, description)
-- Secrets table (name, required, description)
-- Required caller permissions
-- Jobs and notable behavior
-
-## Example workflow
-
-Add to `examples/` with:
-
-```yaml
-jobs:
-  <job>:
-    uses: luxass/shared-workflows/.github/workflows/reusable-<name>.yaml@v0.0.0 # x-release-please-version
-    permissions:
-      contents: read
-```
+- Job-level `permissions:` only as needed, minimal; `persist-credentials: false` on checkout
+- Caller-controlled values in env vars before shell use; `set -euo pipefail` in multi-line scripts
+- No `pull_request_target` triggers; inputs/secrets must have descriptions
+- For GitHub App auth examples, map both `app-id` and `app-private-key` from caller secrets

@@ -97,7 +97,7 @@ jobs:
         env:
           TOOL_NAME: ${{ inputs.tool-name }}
           TOOL_VERSION: ${{ inputs.tool-version }}
-        run: |
+        run: | # zizmor: ignore[adhoc-packages] installing the requested build tool is this workflow's purpose
           set -euo pipefail
           pnpm add -Dw "$TOOL_NAME@$TOOL_VERSION"
 
