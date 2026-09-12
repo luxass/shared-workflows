@@ -74,9 +74,6 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
-      - name: update npm (oidc provenance)
-        run: npm install -g npm@latest
-
       - name: generate changelog
         if: ${{ inputs.generate-changelog }}
         env:
