@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.11.1](https://github.com/luxass/shared-workflows/compare/v0.11.0...v0.11.1) (2026-09-12)
+
+
+### Miscellaneous Chores
+
+* **deps:** update actions/setup to actions/setup/v0.1.5 ([#67](https://github.com/luxass/shared-workflows/issues/67)) ([c62bb11](https://github.com/luxass/shared-workflows/commit/c62bb11502877fd4088ed77c6b6fe32bf7d56f41))
+* **deps:** update third-party actions to latest majors ([#63](https://github.com/luxass/shared-workflows/issues/63)) ([2548502](https://github.com/luxass/shared-workflows/commit/2548502784ee73561962c135b996d9e64a70dff8))
+* **main:** release actions/setup 0.1.5 ([#64](https://github.com/luxass/shared-workflows/issues/64)) ([3a2dc4e](https://github.com/luxass/shared-workflows/commit/3a2dc4e52b786682a0f0fba65eca46b49b7b5c8b))
+* update pnpm ([#66](https://github.com/luxass/shared-workflows/issues/66)) ([2d7c308](https://github.com/luxass/shared-workflows/commit/2d7c308e80379f4a4b87f5c1c47abaf7abaa9613))
+
 ## [0.11.0](https://github.com/luxass/shared-workflows/compare/v0.10.0...v0.11.0) (2026-06-14)
 
 
