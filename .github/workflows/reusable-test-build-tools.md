@@ -22,7 +22,7 @@ jobs:
   test-build-tools:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-test-build-tools.yaml@v0.9.0
+    uses: luxass/shared-workflows/.github/workflows/reusable-test-build-tools.yaml@v0.11.2
     with:
       tool-name: vite
       tool-version: latest
@@ -44,7 +44,7 @@ jobs:
           - { name: "webpack", version: "latest" }
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-test-build-tools.yaml@v0.9.0
+    uses: luxass/shared-workflows/.github/workflows/reusable-test-build-tools.yaml@v0.11.2
     with:
       tool-name: ${{ matrix.tool.name }}
       tool-version: ${{ matrix.tool.version }}

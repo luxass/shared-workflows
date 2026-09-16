@@ -26,7 +26,7 @@ jobs:
   test:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.8.2
+    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.11.2
 ```
 
 ## With Custom Test Command
@@ -36,7 +36,7 @@ jobs:
   test:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.8.2
+    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.11.2
     with:
       node-version: 22
       test-script: "test:ci"
@@ -56,7 +56,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.8.2
+    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.11.2
     with:
       runs-on: ${{ matrix.os }}
       pre-test-script: "build"
@@ -71,7 +71,7 @@ jobs:
   test:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.8.2
+    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.11.2
     with:
       pre-test-script: "build"
       test-script: "test:ci"

@@ -23,7 +23,7 @@ jobs:
     permissions:
       id-token: write
       contents: write
-    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.8.2
+    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.11.2
     secrets: inherit
 ```
 
@@ -35,7 +35,7 @@ jobs:
     permissions:
       id-token: write
       contents: write
-    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.8.2
+    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.11.2
     with:
       recursive: true
       publish-args: "--access public --no-git-checks"
@@ -99,7 +99,7 @@ jobs:
     permissions:
       id-token: write
       contents: write
-    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.8.2
+    uses: luxass/shared-workflows/.github/workflows/reusable-release-npm.yaml@v0.11.2
     with:
       stage: true
     secrets: inherit
