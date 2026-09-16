@@ -43,6 +43,25 @@ jobs:
       install-args: "--prefer-offline"
 ```
 
+## With OS Matrix
+
+Run tests across operating systems by fanning out with a matrix and passing each runner through:
+
+```yaml
+jobs:
+  test:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.8.2
+    with:
+      runs-on: ${{ matrix.os }}
+      pre-test-script: "build"
+```
+
 ## With Pre/Post Test Commands
 
 Run `pnpm build` before tests, `pnpm coverage` after tests, or provide any other pnpm arguments that should run before or after the test step.
@@ -63,6 +82,7 @@ jobs:
 
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
+| `runs-on` | `string` | `ubuntu-latest` | Runner to use for the job (e.g. `ubuntu-latest`, `macos-latest`, `windows-latest`). |
 | `node-version` | `string` | `lts/*` | Node.js version to use. |
 | `persist-credentials` | `boolean` | `false` | Whether checkout should persist git credentials. |
 | `fetch-depth` | `number` | `1` | Number of commits to fetch. Use `0` for full history. |
