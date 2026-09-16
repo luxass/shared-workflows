@@ -1,0 +1,217 @@
+name: Tailnet HTTP service
+
+on:
+  workflow_call:
+    inputs:
+      tailscale-oauth-client-id:
+        description: "Tailscale OIDC federated identity client ID"
+        required: true
+        type: string
+      tailscale-audience:
+        description: "Tailscale OIDC federated identity audience"
+        required: true
+        type: string
+      tailscale-tags:
+        description: "Comma-separated tags for the ephemeral Tailscale node"
+        required: false
+        type: string
+        default: "tag:ci"
+      service-url:
+        description: "Private service base URL, including port, for example http://kestrel:8080"
+        required: true
+        type: string
+      status-path:
+        description: "Path for the status request"
+        required: false
+        type: string
+        default: "/status"
+      status-jq:
+        description: "Optional jq expression that must return true for the status response"
+        required: false
+        type: string
+        default: ""
+      action-path:
+        description: "Optional path for a POST request after the status check passes"
+        required: false
+        type: string
+        default: ""
+      action-body:
+        description: "JSON body for the optional POST request"
+        required: false
+        type: string
+        default: "{}"
+    secrets:
+      bearer-token:
+        description: "Bearer token for the private service"
+        required: true
+    outputs:
+      status-http-code:
+        description: "HTTP status code returned by the status request"
+        value: ${{ jobs.request.outputs.status-http-code }}
+      action-http-code:
+        description: "HTTP status code returned by the action request, or empty when no action path was configured"
+        value: ${{ jobs.request.outputs.action-http-code }}
+      action-performed:
+        description: "true when the workflow sent the optional POST request"
+        value: ${{ jobs.request.outputs.action-performed }}
+
+permissions: {}
+
+jobs:
+  request:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    outputs:
+      status-http-code: ${{ steps.status.outputs.http-code }}
+      action-http-code: ${{ steps.action.outputs.http-code || '' }}
+      action-performed: ${{ steps.action.outputs.performed || 'false' }}
+    steps:
+      - name: validate configuration
+        id: config
+        env:
+          TS_CLIENT_ID: ${{ inputs.tailscale-oauth-client-id }}
+          TS_AUDIENCE: ${{ inputs.tailscale-audience }}
+          TS_TAGS: ${{ inputs.tailscale-tags }}
+          SERVICE_URL: ${{ inputs.service-url }}
+          STATUS_PATH: ${{ inputs.status-path }}
+          ACTION_PATH: ${{ inputs.action-path }}
+          BEARER_TOKEN: ${{ secrets.bearer-token }}
+        run: |
+          set -euo pipefail
+
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+
+          [ -n "$TS_CLIENT_ID" ] || fail "tailscale-oauth-client-id is required."
+          [ -n "$TS_AUDIENCE" ] || fail "tailscale-audience is required."
+          [ -n "$TS_TAGS" ] || fail "tailscale-tags must not be empty."
+          [ -n "$BEARER_TOKEN" ] || fail "bearer-token is required."
+
+          if ! [[ "$SERVICE_URL" =~ ^https?://([A-Za-z0-9.-]+):([1-9][0-9]{0,4})$ ]]; then
+            fail "service-url must contain an HTTP or HTTPS hostname and port, for example http://kestrel:8080."
+          fi
+
+          service_hostname=${BASH_REMATCH[1]}
+          service_port=${BASH_REMATCH[2]}
+          if [ "$service_port" -gt 65535 ]; then
+            fail "service-url contains an invalid TCP port."
+          fi
+
+          case "$STATUS_PATH" in
+            /*) ;;
+            *) fail "status-path must start with /." ;;
+          esac
+
+          if [ -n "$ACTION_PATH" ]; then
+            case "$ACTION_PATH" in
+              /*) ;;
+              *) fail "action-path must start with /." ;;
+            esac
+          fi
+
+          echo "service-hostname=${service_hostname}" >> "$GITHUB_OUTPUT"
+          echo "status-url=${SERVICE_URL}${STATUS_PATH}" >> "$GITHUB_OUTPUT"
+          if [ -n "$ACTION_PATH" ]; then
+            echo "action-url=${SERVICE_URL}${ACTION_PATH}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: connect to Tailscale
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        with:
+          oauth-client-id: ${{ inputs.tailscale-oauth-client-id }}
+          audience: ${{ inputs.tailscale-audience }}
+          tags: ${{ inputs.tailscale-tags }}
+          ping: ${{ steps.config.outputs.service-hostname }}
+
+      - name: check service status
+        id: status
+        env:
+          BEARER_TOKEN: ${{ secrets.bearer-token }}
+          STATUS_URL: ${{ steps.config.outputs.status-url }}
+          STATUS_JQ: ${{ inputs.status-jq }}
+        run: |
+          set -euo pipefail
+
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+
+          response_file="${RUNNER_TEMP}/tailnet-http-status.json"
+          if ! http_code=$(curl \
+            --silent \
+            --show-error \
+            --output "$response_file" \
+            --write-out '%{http_code}' \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 1 \
+            --retry-connrefused \
+            --header "Authorization: Bearer ${BEARER_TOKEN}" \
+            "$STATUS_URL"); then
+            fail "Status request failed before receiving an HTTP response from ${STATUS_URL}."
+          fi
+
+          case "$http_code" in
+            2??) ;;
+            401) fail "Status request returned HTTP 401. Check bearer-token." ;;
+            *) fail "Status request returned HTTP ${http_code} for ${STATUS_URL}." ;;
+          esac
+
+          if [ -n "$STATUS_JQ" ]; then
+            jq -e . "$response_file" > /dev/null || fail "Status response is not valid JSON."
+            jq -e "$STATUS_JQ" "$response_file" > /dev/null || \
+              fail "Status response did not satisfy status-jq: ${STATUS_JQ}"
+          fi
+
+          echo "http-code=${http_code}" >> "$GITHUB_OUTPUT"
+          echo "Status check passed with HTTP ${http_code}."
+
+      - name: call action endpoint
+        id: action
+        if: ${{ inputs.action-path != '' }}
+        env:
+          ACTION_BODY: ${{ inputs.action-body }}
+          ACTION_URL: ${{ steps.config.outputs.action-url }}
+          BEARER_TOKEN: ${{ secrets.bearer-token }}
+        run: |
+          set -euo pipefail
+
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+
+          body_file="${RUNNER_TEMP}/tailnet-http-action-body.json"
+          response_file="${RUNNER_TEMP}/tailnet-http-action-response"
+          printf '%s' "$ACTION_BODY" > "$body_file"
+          jq -e . "$body_file" > /dev/null || fail "action-body is not valid JSON."
+
+          if ! http_code=$(curl \
+            --silent \
+            --show-error \
+            --output "$response_file" \
+            --write-out '%{http_code}' \
+            --request POST \
+            --connect-timeout 10 \
+            --max-time 60 \
+            --header "Authorization: Bearer ${BEARER_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data-binary "@${body_file}" \
+            "$ACTION_URL"); then
+            fail "Action request failed before receiving an HTTP response from ${ACTION_URL}. The outcome may be uncertain."
+          fi
+
+          case "$http_code" in
+            2??) ;;
+            401) fail "Action request returned HTTP 401. Check bearer-token." ;;
+            *) fail "Action request returned HTTP ${http_code} for ${ACTION_URL}. The outcome may be uncertain." ;;
+          esac
+
+          echo "http-code=${http_code}" >> "$GITHUB_OUTPUT"
+          echo "performed=true" >> "$GITHUB_OUTPUT"
+          echo "Action request succeeded with HTTP ${http_code}."

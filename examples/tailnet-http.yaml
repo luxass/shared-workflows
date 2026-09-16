@@ -1,0 +1,78 @@
+name: Tailnet iMessage relay smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      send-message:
+        description: "Send an iMessage after the status check passes"
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 */6 * * *"
+
+permissions: {}
+
+jobs:
+  approve-send:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.send-message }}
+    runs-on: ubuntu-latest
+    environment: tailnet
+    permissions: {}
+    steps:
+      - name: confirm side effect
+        run: echo "Approved iMessage send"
+
+  build-message:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.send-message }}
+    needs:
+      - approve-send
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      body: ${{ steps.payload.outputs.body }}
+    steps:
+      - name: build JSON payload
+        id: payload
+        env:
+          RELAY_TO: ${{ vars.RELAY_TO }}
+        run: |
+          set -euo pipefail
+          test -n "$RELAY_TO"
+
+          workflow_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          message=$(cat <<EOF
+          ✅ Tailscale smoke test passed
+
+          Repository: ${GITHUB_REPOSITORY}
+          Workflow: ${workflow_url}
+          EOF
+          )
+          payload=$(jq -cn \
+            --arg to "$RELAY_TO" \
+            --arg text "$message" \
+            '{to: $to, text: $text}')
+
+          {
+            echo 'body<<EOF'
+            printf '%s\n' "$payload"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+  relay:
+    needs:
+      - approve-send
+      - build-message
+    if: ${{ always() && !cancelled() && (needs.approve-send.result == 'success' || needs.approve-send.result == 'skipped') && (needs.build-message.result == 'success' || needs.build-message.result == 'skipped') }}
+    permissions:
+      id-token: write
+    uses: luxass/shared-workflows/.github/workflows/reusable-tailnet-http.yaml@v0.11.2 # x-release-please-version
+    with:
+      tailscale-oauth-client-id: ${{ vars.TS_OAUTH_CLIENT_ID }}
+      tailscale-audience: ${{ vars.TS_AUDIENCE }}
+      service-url: http://kestrel:8080
+      status-jq: '.ready == true'
+      action-path: ${{ github.event_name == 'workflow_dispatch' && inputs.send-message && '/send' || '' }}
+      action-body: ${{ needs.build-message.outputs.body || '{}' }}
+    secrets:
+      bearer-token: ${{ secrets.RELAY_TOKEN }}
