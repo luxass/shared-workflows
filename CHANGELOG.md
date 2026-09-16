@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/luxass/shared-workflows/compare/v0.11.2...v0.12.0) (2026-09-16)
+
+
+### Features
+
+* add support for custom runners in reusable workflows ([#72](https://github.com/luxass/shared-workflows/issues/72)) ([95e3884](https://github.com/luxass/shared-workflows/commit/95e3884b9f2ccf1ed35512fbe3607fb1252f477f))
+
 ## [0.11.2](https://github.com/luxass/shared-workflows/compare/v0.11.1...v0.11.2) (2026-09-12)
 
 
