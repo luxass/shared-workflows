@@ -8,13 +8,30 @@ on:
         type: string
         required: true
       formula-path:
-        description: "Path to the formula file in the tap repo"
+        description: "Optional path to a formula file in the tap repo"
         type: string
-        required: true
+        default: ""
+        required: false
       formula-name:
-        description: "Name of the formula (used for sha-update-id markers)"
+        description: "Formula archive prefix and sha-update-id marker prefix"
         type: string
-        required: true
+        default: ""
+        required: false
+      cask-path:
+        description: "Optional path to a cask file in the tap repository"
+        type: string
+        default: ""
+        required: false
+      cask-name:
+        description: "Release ZIP name prefix and cask checksum marker prefix"
+        type: string
+        default: ""
+        required: false
+      cask-target:
+        description: "Release ZIP target suffix for the cask"
+        type: string
+        default: ""
+        required: false
       base-branch:
         description: "Base branch for the PR"
         type: string
@@ -26,9 +43,10 @@ on:
         default: "homebrew-tap"
         required: false
       targets:
-        description: "JSON array of targets to update checksums for"
+        description: "JSON array of formula targets to update checksums for"
         type: string
-        required: true
+        default: ""
+        required: false
       git-user-name:
         description: "Git user name for the commit"
         type: string
@@ -54,7 +72,7 @@ permissions: {}
 
 jobs:
   update-formula:
-    name: Update ${{ inputs.formula-name }} formula
+    name: Update ${{ inputs.formula-name || inputs.cask-name }} ${{ inputs.formula-name && 'formula' || 'cask' }}
     runs-on: ubuntu-latest
     environment:
       name: ${{ inputs.environment }}
@@ -62,6 +80,33 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: validate tap inputs
+        env:
+          FORMULA_PATH: ${{ inputs.formula-path }}
+          FORMULA_NAME: ${{ inputs.formula-name }}
+          TARGETS: ${{ inputs.targets }}
+          CASK_PATH: ${{ inputs.cask-path }}
+          CASK_NAME: ${{ inputs.cask-name }}
+          CASK_TARGET: ${{ inputs.cask-target }}
+        run: |
+          set -euo pipefail
+          if [ -n "$FORMULA_PATH$FORMULA_NAME" ] && { [ -z "$FORMULA_PATH" ] || [ -z "$FORMULA_NAME" ]; }; then
+            echo "formula-path and formula-name must be set together" >&2
+            exit 1
+          fi
+          if [ -n "$FORMULA_PATH" ] && [ -z "$TARGETS" ]; then
+            echo "targets must be set when updating a formula" >&2
+            exit 1
+          fi
+          if [ -n "$CASK_PATH$CASK_NAME$CASK_TARGET" ] && { [ -z "$CASK_PATH" ] || [ -z "$CASK_NAME" ] || [ -z "$CASK_TARGET" ]; }; then
+            echo "cask-path, cask-name, and cask-target must be set together" >&2
+            exit 1
+          fi
+          if [ -z "$FORMULA_PATH$CASK_PATH" ]; then
+            echo "Configure a formula, a cask, or both" >&2
+            exit 1
+          fi
+
       - name: validate auth
         id: auth
         env:
@@ -113,18 +158,33 @@ jobs:
         env:
           TARGETS: ${{ inputs.targets }}
           FORMULA_NAME: ${{ inputs.formula-name }}
+          CASK_PATH: ${{ inputs.cask-path }}
+          CASK_NAME: ${{ inputs.cask-name }}
+          CASK_TARGET: ${{ inputs.cask-target }}
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
           version="${version#*@}"
 
-          while IFS= read -r target; do
-            tarball="${FORMULA_NAME}-${version}-${target}.tar.gz"
-            if [ -f "assets/${tarball}" ]; then
-              sha=$(sha256sum "assets/${tarball}" | awk '{print $1}')
-              echo "${target}=${sha}" >> "$GITHUB_OUTPUT"
+          if [ -n "$FORMULA_NAME" ]; then
+            while IFS= read -r target; do
+              tarball="${FORMULA_NAME}-${version}-${target}.tar.gz"
+              if [ -f "assets/${tarball}" ]; then
+                sha=$(sha256sum "assets/${tarball}" | awk '{print $1}')
+                echo "${target}=${sha}" >> "$GITHUB_OUTPUT"
+              fi
+            done < <(echo "$TARGETS" | jq -r '.[]')
+          fi
+
+          if [ -n "$CASK_PATH" ]; then
+            archive="${CASK_NAME}-${version}-${CASK_TARGET}.zip"
+            if [ ! -f "assets/${archive}" ]; then
+              echo "Missing release asset: ${archive}" >&2
+              exit 1
             fi
-          done < <(echo "$TARGETS" | jq -r '.[]')
+            sha=$(sha256sum "assets/${archive}" | awk '{print $1}')
+            echo "cask=${sha}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: clone homebrew-tap
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -138,6 +198,7 @@ jobs:
           persist-credentials: true
 
       - name: update formula
+        if: ${{ inputs.formula-path != '' }}
         env:
           VERSION: ${{ github.event.release.tag_name }}
           FORMULA_PATH: ${{ inputs.formula-path }}
@@ -164,11 +225,43 @@ jobs:
 
           sed -i "s|version \".*\"|version \"${version}\"|" "$formula"
 
+      - name: update cask
+        if: ${{ inputs.cask-path != '' }}
+        env:
+          VERSION: ${{ github.event.release.tag_name }}
+          CASK_PATH: ${{ inputs.cask-path }}
+          CASK_NAME: ${{ inputs.cask-name }}
+          CASK_TARGET: ${{ inputs.cask-target }}
+          CASK_SHA: ${{ steps.checksums.outputs.cask }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path("tap") / os.environ["CASK_PATH"]
+          version = os.environ["VERSION"].removeprefix("v").split("@")[-1]
+          sha = os.environ["CASK_SHA"]
+          marker = f'{os.environ["CASK_NAME"]}-{os.environ["CASK_TARGET"]}'
+          content = path.read_text()
+          version_pattern = r'(?m)^  version "[^"]+"$'
+          sha_pattern = rf'(?m)^  sha256 "[0-9a-f]{{64}}" # sha-update-id: {re.escape(marker)}$'
+          content, version_count = re.subn(version_pattern, f'  version "{version}"', content)
+          content, sha_count = re.subn(sha_pattern, f'  sha256 "{sha}" # sha-update-id: {marker}', content)
+          if version_count != 1 or sha_count != 1:
+              raise SystemExit(f"Expected one cask version and checksum marker in {path}; found {version_count} and {sha_count}")
+          path.write_text(content)
+          PY
+
       - name: create pr
         env:
           GH_TOKEN: ${{ secrets.token || steps.app-token.outputs.token }}
           TAG: ${{ github.event.release.tag_name }}
           FORMULA_NAME: ${{ inputs.formula-name }}
+          CASK_NAME: ${{ inputs.cask-name }}
+          CASK_TARGET: ${{ inputs.cask-target }}
+          CASK_SHA: ${{ steps.checksums.outputs.cask }}
           BASE: ${{ inputs.base-branch }}
           TARGETS: ${{ inputs.targets }}
           CHECKSUMS: ${{ toJSON(steps.checksums.outputs) }}
@@ -180,17 +273,25 @@ jobs:
 
           version="${TAG#v}"
           version="${version#*@}"
-          branch="update-${FORMULA_NAME}-${version}"
+          name="${FORMULA_NAME:-$CASK_NAME}"
+          branch="update-${name}-${version}"
           git checkout -b "$branch"
           git config user.email "$GIT_USER_EMAIL"
           git config user.name "$GIT_USER_NAME"
           git add -A
-          git commit -m "chore: update ${FORMULA_NAME} to ${version}"
+          git commit -m "chore: update ${name} to ${version}"
           git push origin "$branch"
 
+          if [ -n "$FORMULA_NAME" ] && [ -n "$CASK_NAME" ]; then
+            summary="Automated update of the \`${FORMULA_NAME}\` Homebrew formula and the \`${CASK_NAME}\` cask to \`${version}\`."
+          elif [ -n "$FORMULA_NAME" ]; then
+            summary="Automated update of the \`${FORMULA_NAME}\` Homebrew formula to \`${version}\`."
+          else
+            summary="Automated update of the \`${CASK_NAME}\` Homebrew cask to \`${version}\`."
+          fi
           body="## Summary
 
-          Automated update of the \`${FORMULA_NAME}\` Homebrew formula to \`${version}\`.
+          ${summary}
 
           ## Updated targets
 
@@ -205,6 +306,11 @@ jobs:
             fi
           done < <(echo "$TARGETS" | jq -r '.[]')
 
+          if [ -n "$CASK_NAME" ]; then
+            body="${body}
+          | \`${CASK_NAME}-${CASK_TARGET}.zip\` | \`${CASK_SHA}\` |"
+          fi
+
           body="${body}
 
           ## Links
@@ -212,7 +318,7 @@ jobs:
           - [Release ${TAG}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG})"
 
           gh pr create \
-            --title "chore: update ${FORMULA_NAME} to ${version}" \
+            --title "chore: update ${name} to ${version}" \
             --body "$body" \
             --base "$BASE" \
             --head "$branch"
