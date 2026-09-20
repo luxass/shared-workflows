@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/luxass/shared-workflows/compare/v0.12.0...v0.13.0) (2026-09-20)
+
+
+### Features
+
+* **homebrew:** support optional formula and cask updates ([#74](https://github.com/luxass/shared-workflows/issues/74)) ([5b6f9c8](https://github.com/luxass/shared-workflows/commit/5b6f9c8b1ffcd9074d3cc6480dec2ab6c85372fa))
+
 ## [0.12.0](https://github.com/luxass/shared-workflows/compare/v0.11.2...v0.12.0) (2026-09-16)
 
 
