@@ -1,8 +1,8 @@
 # Update Homebrew Tap
 
-Reusable workflow for updating a Homebrew tap formula and optional cask after a release.
+Reusable workflow for updating a Homebrew tap formula, cask, or both after a release.
 
-The workflow downloads release assets from the triggering release, computes SHA256 checksums, clones the tap repository, updates the formula and optional cask with the new version and checksums, and creates one pull request.
+The workflow downloads release assets from the triggering release, computes SHA256 checksums, clones the tap repository, updates the configured tap entries, and creates one pull request. Configure at least one formula or cask. Existing formula-only callers can keep their inputs unchanged.
 
 ## Usage
 
@@ -32,7 +32,9 @@ jobs:
       app-private-key: ${{ secrets.HOMEBREW_TAP_APP_PRIVATE_KEY }}
 ```
 
-To update a cask in the same pull request, also provide `cask-path`, `cask-name`, and `cask-target`. For example, `Casks/imessage-relay.rb`, `imessage-relay`, and `macos-universal` select `imessage-relay-<version>-macos-universal.zip`. Pin a release of this workflow that includes cask support, then add these inputs to the calling job:
+### Formula and cask
+
+To update both in the same pull request, provide both sets of inputs. For example, `Casks/imessage-relay.rb`, `imessage-relay`, and `macos-universal` select `imessage-relay-<version>-macos-universal.zip`. Pin a release of this workflow that includes cask support, then use:
 
 ```yaml
 with:
@@ -40,6 +42,18 @@ with:
   formula-path: Formula/imessage-relay-server.rb
   formula-name: imessage-relay-server
   targets: '["macos-universal"]'
+  cask-path: Casks/imessage-relay.rb
+  cask-name: imessage-relay
+  cask-target: macos-universal
+```
+
+### Cask only
+
+Omit `formula-path`, `formula-name`, and `targets` when the release has no formula:
+
+```yaml
+with:
+  tap-repository: luxass/homebrew-tap
   cask-path: Casks/imessage-relay.rb
   cask-name: imessage-relay
   cask-target: macos-universal
@@ -57,6 +71,7 @@ jobs:
       tap-repository: luxass/homebrew-tap
       formula-path: Formula/actioneer.rb
       formula-name: actioneer
+      targets: '["aarch64-apple-darwin", "x86_64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu"]'
     secrets:
       token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
@@ -66,14 +81,14 @@ jobs:
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
 | `tap-repository` | `string` | - | Homebrew tap repository (e.g. `luxass/homebrew-tap`). |
-| `formula-path` | `string` | - | Path to the formula file in the tap repo. |
-| `formula-name` | `string` | - | Name of the formula (used for `sha-update-id` markers). |
+| `formula-path` | `string` | `""` | Optional path to a formula file in the tap repo. Set with `formula-name`. |
+| `formula-name` | `string` | `""` | Formula archive prefix and `sha-update-id` marker prefix. |
 | `cask-path` | `string` | `""` | Optional path to a cask file in the tap repo. Set with `cask-name` and `cask-target`. |
 | `cask-name` | `string` | `""` | Prefix for the versioned cask ZIP and checksum marker. |
 | `cask-target` | `string` | `""` | Target suffix for the versioned cask ZIP and checksum marker. |
 | `base-branch` | `string` | `main` | Base branch for the PR. |
 | `environment` | `string` | `homebrew-tap` | GitHub environment to use. |
-| `targets` | `string` | `[darwin arm/x64, linux arm/x64]` | JSON array of targets to update checksums for. |
+| `targets` | `string` | `""` | JSON array of formula targets; required when a formula is configured. |
 | `git-user-name` | `string` | `luxass-homebrew` | Git user name for the commit. |
 | `git-user-email` | `string` | `luxass-homebrew[bot]@users.noreply.github.com` | Git user email for the commit. |
 
@@ -105,9 +120,9 @@ permissions:
   contents: read
 ```
 
-## Formula Requirements
+## Tap File Requirements
 
-The formula file must contain `sha-update-id` markers for each target:
+When a formula is configured, its file must contain `sha-update-id` markers for each target:
 
 ```ruby
 sha256 "..." # sha-update-id: actioneer-aarch64-apple-darwin
@@ -122,4 +137,4 @@ When a cask is configured, its `sha256` line must have a `sha-update-id: <cask-n
 
 | Job | Description |
 | --- | --- |
-| `update-formula` | Downloads release assets, computes checksums, updates the formula and optional cask, and creates a PR with a structured summary of updated targets and checksums. |
+| `update-formula` | Downloads release assets, computes checksums, updates the configured formula or cask entries, and creates a PR with a structured summary of updated targets and checksums. |

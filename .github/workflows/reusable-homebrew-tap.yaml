@@ -8,13 +8,15 @@ on:
         type: string
         required: true
       formula-path:
-        description: "Path to the formula file in the tap repo"
+        description: "Optional path to a formula file in the tap repo"
         type: string
-        required: true
+        default: ""
+        required: false
       formula-name:
-        description: "Name of the formula (used for sha-update-id markers)"
+        description: "Formula archive prefix and sha-update-id marker prefix"
         type: string
-        required: true
+        default: ""
+        required: false
       cask-path:
         description: "Optional path to a cask file in the tap repository"
         type: string
@@ -41,9 +43,10 @@ on:
         default: "homebrew-tap"
         required: false
       targets:
-        description: "JSON array of targets to update checksums for"
+        description: "JSON array of formula targets to update checksums for"
         type: string
-        required: true
+        default: ""
+        required: false
       git-user-name:
         description: "Git user name for the commit"
         type: string
@@ -69,7 +72,7 @@ permissions: {}
 
 jobs:
   update-formula:
-    name: Update ${{ inputs.formula-name }} formula
+    name: Update ${{ inputs.formula-name || inputs.cask-name }} ${{ inputs.formula-name && 'formula' || 'cask' }}
     runs-on: ubuntu-latest
     environment:
       name: ${{ inputs.environment }}
@@ -77,6 +80,33 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: validate tap inputs
+        env:
+          FORMULA_PATH: ${{ inputs.formula-path }}
+          FORMULA_NAME: ${{ inputs.formula-name }}
+          TARGETS: ${{ inputs.targets }}
+          CASK_PATH: ${{ inputs.cask-path }}
+          CASK_NAME: ${{ inputs.cask-name }}
+          CASK_TARGET: ${{ inputs.cask-target }}
+        run: |
+          set -euo pipefail
+          if [ -n "$FORMULA_PATH$FORMULA_NAME" ] && { [ -z "$FORMULA_PATH" ] || [ -z "$FORMULA_NAME" ]; }; then
+            echo "formula-path and formula-name must be set together" >&2
+            exit 1
+          fi
+          if [ -n "$FORMULA_PATH" ] && [ -z "$TARGETS" ]; then
+            echo "targets must be set when updating a formula" >&2
+            exit 1
+          fi
+          if [ -n "$CASK_PATH$CASK_NAME$CASK_TARGET" ] && { [ -z "$CASK_PATH" ] || [ -z "$CASK_NAME" ] || [ -z "$CASK_TARGET" ]; }; then
+            echo "cask-path, cask-name, and cask-target must be set together" >&2
+            exit 1
+          fi
+          if [ -z "$FORMULA_PATH$CASK_PATH" ]; then
+            echo "Configure a formula, a cask, or both" >&2
+            exit 1
+          fi
+
       - name: validate auth
         id: auth
         env:
@@ -136,19 +166,17 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           version="${version#*@}"
 
-          while IFS= read -r target; do
-            tarball="${FORMULA_NAME}-${version}-${target}.tar.gz"
-            if [ -f "assets/${tarball}" ]; then
-              sha=$(sha256sum "assets/${tarball}" | awk '{print $1}')
-              echo "${target}=${sha}" >> "$GITHUB_OUTPUT"
-            fi
-          done < <(echo "$TARGETS" | jq -r '.[]')
+          if [ -n "$FORMULA_NAME" ]; then
+            while IFS= read -r target; do
+              tarball="${FORMULA_NAME}-${version}-${target}.tar.gz"
+              if [ -f "assets/${tarball}" ]; then
+                sha=$(sha256sum "assets/${tarball}" | awk '{print $1}')
+                echo "${target}=${sha}" >> "$GITHUB_OUTPUT"
+              fi
+            done < <(echo "$TARGETS" | jq -r '.[]')
+          fi
 
-          if [ -n "$CASK_PATH$CASK_NAME$CASK_TARGET" ]; then
-            if [ -z "$CASK_PATH" ] || [ -z "$CASK_NAME" ] || [ -z "$CASK_TARGET" ]; then
-              echo "cask-path, cask-name, and cask-target must be set together" >&2
-              exit 1
-            fi
+          if [ -n "$CASK_PATH" ]; then
             archive="${CASK_NAME}-${version}-${CASK_TARGET}.zip"
             if [ ! -f "assets/${archive}" ]; then
               echo "Missing release asset: ${archive}" >&2
@@ -170,6 +198,7 @@ jobs:
           persist-credentials: true
 
       - name: update formula
+        if: ${{ inputs.formula-path != '' }}
         env:
           VERSION: ${{ github.event.release.tag_name }}
           FORMULA_PATH: ${{ inputs.formula-path }}
@@ -244,21 +273,25 @@ jobs:
 
           version="${TAG#v}"
           version="${version#*@}"
-          branch="update-${FORMULA_NAME}-${version}"
+          name="${FORMULA_NAME:-$CASK_NAME}"
+          branch="update-${name}-${version}"
           git checkout -b "$branch"
           git config user.email "$GIT_USER_EMAIL"
           git config user.name "$GIT_USER_NAME"
           git add -A
-          git commit -m "chore: update ${FORMULA_NAME} to ${version}"
+          git commit -m "chore: update ${name} to ${version}"
           git push origin "$branch"
 
-          cask_summary=""
-          if [ -n "$CASK_NAME" ]; then
-            cask_summary=" and the \`${CASK_NAME}\` cask"
+          if [ -n "$FORMULA_NAME" ] && [ -n "$CASK_NAME" ]; then
+            summary="Automated update of the \`${FORMULA_NAME}\` Homebrew formula and the \`${CASK_NAME}\` cask to \`${version}\`."
+          elif [ -n "$FORMULA_NAME" ]; then
+            summary="Automated update of the \`${FORMULA_NAME}\` Homebrew formula to \`${version}\`."
+          else
+            summary="Automated update of the \`${CASK_NAME}\` Homebrew cask to \`${version}\`."
           fi
           body="## Summary
 
-          Automated update of the \`${FORMULA_NAME}\` Homebrew formula${cask_summary} to \`${version}\`.
+          ${summary}
 
           ## Updated targets
 
@@ -285,7 +318,7 @@ jobs:
           - [Release ${TAG}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG})"
 
           gh pr create \
-            --title "chore: update ${FORMULA_NAME} to ${version}" \
+            --title "chore: update ${name} to ${version}" \
             --body "$body" \
             --base "$BASE" \
             --head "$branch"
