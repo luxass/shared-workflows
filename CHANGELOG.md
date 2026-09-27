@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.14.0](https://github.com/luxass/shared-workflows/compare/v0.13.0...v0.14.0) (2026-09-27)
+
+
+### Features
+
+* add tailscale workflow ([#78](https://github.com/luxass/shared-workflows/issues/78)) ([657f5c4](https://github.com/luxass/shared-workflows/commit/657f5c49882f9aca0479d3ac7a9decb76daab84d))
+
+
+### Miscellaneous Chores
+
+* **workflows:** use self-repository syntax for in-repo workflow calls ([#76](https://github.com/luxass/shared-workflows/issues/76)) ([34e3ba9](https://github.com/luxass/shared-workflows/commit/34e3ba96c028e4a155b7ffccc1bf52a9857163df))
+
 ## [0.13.0](https://github.com/luxass/shared-workflows/compare/v0.12.0...v0.13.0) (2026-09-20)
 
 

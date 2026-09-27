@@ -15,4 +15,4 @@ jobs:
   test:
     permissions:
       contents: read
-    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.13.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.14.0 # x-release-please-version
