@@ -16,7 +16,7 @@ jobs:
     # workflow declares the `tailnet` environment itself, through its own
     # `environment` input. Its secrets are still readable here, so every secret
     # below can stay a `tailnet` environment secret.
-    uses: luxass/shared-workflows/.github/workflows/reusable-tailscale.yaml@v0.13.0 # x-release-please-version
+    uses: luxass/shared-workflows/.github/workflows/reusable-tailscale.yaml@v0.14.0 # x-release-please-version
     with:
       tags: tag:ci
       ping: app.example.ts.net
