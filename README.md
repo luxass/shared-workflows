@@ -11,6 +11,7 @@ This repository contains reusable GitHub Actions workflows and composite actions
 | [reusable-test-build-tools.yaml](.github/workflows/reusable-test-build-tools.yaml) | Tests build, test, and typecheck commands against a build tool package matrix. | [Docs](.github/workflows/reusable-test-build-tools.md) | [Example](examples/test-build-tools.yaml) |
 | [reusable-ci-security.yaml](.github/workflows/reusable-ci-security.yaml) | Runs zizmor security analysis for GitHub Actions and uploads SARIF results. | [Docs](.github/workflows/reusable-ci-security.md) | [Example](examples/ci-security.yaml) |
 | [reusable-release-npm.yaml](.github/workflows/reusable-release-npm.yaml) | Publishes packages to npm with OIDC provenance. | [Docs](.github/workflows/reusable-release-npm.md) | [Example](examples/release-npm.yaml) |
+| [reusable-tailscale.yaml](.github/workflows/reusable-tailscale.yaml) | Connects a job to a Tailscale tailnet and verifies the connection. | [Docs](.github/workflows/reusable-tailscale.md) | [Example](examples/tailscale.yaml) |
 
 Each reusable workflow has its own documentation with inputs, secrets, permissions, examples, and operational notes.
 
@@ -61,6 +62,7 @@ Examples use top-level `permissions: {}` and grant the required permissions on e
 - [Test Build Tools](examples/test-build-tools.yaml)
 - [CI Security](examples/ci-security.yaml)
 - [Release (npm)](examples/release-npm.yaml)
+- [Tailscale](examples/tailscale.yaml)
 
 ## Contributing
 

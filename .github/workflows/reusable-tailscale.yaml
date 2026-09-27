@@ -1,0 +1,182 @@
+name: Connect to Tailscale
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "Runner to use for the job (e.g. ubuntu-latest, ubuntu-24.04, self-hosted label)"
+        type: string
+        default: "ubuntu-latest"
+        required: false
+      environment:
+        description: "GitHub environment to use, for environment-scoped secrets"
+        type: string
+        default: "tailnet"
+        required: false
+      tags:
+        description: "Comma separated tailnet tags to apply to the node (e.g. `tag:ci`)"
+        type: string
+        required: true
+      hostname:
+        description: "Fixed hostname for the node, defaults to a name derived from the runner"
+        type: string
+        default: ""
+        required: false
+      ping:
+        description: "Comma separated hosts to `tailscale ping` after connecting (MagicDNS name or 100.x address)"
+        type: string
+        default: ""
+        required: false
+      version:
+        description: "Tailscale CLI version to install (`latest`, `unstable`, or an exact `x.y.z`)"
+        type: string
+        default: "latest"
+        required: false
+      script:
+        description: "Optional path to a script in the calling repository, run with bash after connecting"
+        type: string
+        default: ""
+        required: false
+    secrets:
+      oauth-client-id:
+        description: "Tailscale OAuth client ID, or OIDC federated identity client ID"
+        required: true
+      oauth-secret:
+        description: "Tailscale OAuth client secret. Not needed when using workload identity federation"
+        required: false
+      audience:
+        description: "Tailscale OIDC federated identity audience. Used instead of `oauth-secret`"
+        required: false
+
+permissions: {}
+
+jobs:
+  tailnet:
+    name: tailnet
+    runs-on: ${{ inputs.runs-on }}
+    environment: ${{ inputs.environment }}
+    permissions:
+      # Mints the OIDC token that `tailscale/github-action` exchanges for a tailnet
+      # node when authenticating with workload identity federation.
+      id-token: write
+      # Only read from when `script` is set, to check the script out of the calling
+      # repository. GitHub scopes permissions per job, so it is declared up front.
+      contents: read
+    steps:
+      # Every caller-controlled value is format checked before it reaches the
+      # Tailscale action or bash. Annotations are static strings, never
+      # interpolated with input or command output, so a newline in a value
+      # cannot inject a second workflow command.
+      - name: validate inputs
+        shell: bash
+        env:
+          TAGS: ${{ inputs.tags }}
+          HOSTNAME_INPUT: ${{ inputs.hostname }}
+          PING: ${{ inputs.ping }}
+          VERSION: ${{ inputs.version }}
+          SCRIPT: ${{ inputs.script }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          OAUTH_CLIENT_ID: ${{ secrets.oauth-client-id }}
+          OAUTH_SECRET: ${{ secrets.oauth-secret }}
+          AUDIENCE: ${{ secrets.audience }}
+        run: |
+          set -euo pipefail
+
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+
+          if [ -z "$OAUTH_CLIENT_ID" ]; then
+            fail "secrets.oauth-client-id is required"
+          fi
+
+          if [ -n "$OAUTH_SECRET" ] && [ -n "$AUDIENCE" ]; then
+            fail "Provide either secrets.oauth-secret or secrets.audience, not both"
+          fi
+
+          if [ -z "$OAUTH_SECRET" ] && [ -z "$AUDIENCE" ]; then
+            fail "Either secrets.oauth-secret or secrets.audience is required"
+          fi
+
+          if [ -z "$ENVIRONMENT" ]; then
+            fail "inputs.environment must not be empty"
+          fi
+
+          if [[ ! "$TAGS" =~ ^tag:[A-Za-z0-9][A-Za-z0-9-]*(,tag:[A-Za-z0-9][A-Za-z0-9-]*)*$ ]]; then
+            fail "inputs.tags must be a comma separated list of tags, such as tag:ci"
+          fi
+
+          # Matches the rule the Tailscale action documents: alphanumeric and
+          # dashes only, 1-63 characters, no leading or trailing dash. Uppercase
+          # is accepted because Tailscale normalizes machine names to lowercase.
+          if [ -n "$HOSTNAME_INPUT" ] && [[ ! "$HOSTNAME_INPUT" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]]; then
+            fail "inputs.hostname must be a single DNS label of letters, digits, and dashes"
+          fi
+
+          if [ -n "$PING" ] && [[ ! "$PING" =~ ^[A-Za-z0-9.-]+(:[0-9]+)?(,[A-Za-z0-9.-]+(:[0-9]+)?)*$ ]]; then
+            fail "inputs.ping must be a comma separated list of hostnames or 100.x addresses"
+          fi
+
+          if [[ ! "$VERSION" =~ ^(latest|unstable|[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            fail "inputs.version must be latest, unstable, or an exact x.y.z version"
+          fi
+
+          if [ -n "$SCRIPT" ] && { [[ "$SCRIPT" == /* ]] || [[ "$SCRIPT" == *".."* ]] || [[ ! "$SCRIPT" =~ ^[A-Za-z0-9._/-]+$ ]]; }; then
+            fail "inputs.script must be a relative path to a script in the calling repository"
+          fi
+
+      - name: checkout
+        if: ${{ inputs.script != '' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: connect to tailscale
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.oauth-client-id }}
+          oauth-secret: ${{ secrets.oauth-secret }}
+          audience: ${{ secrets.audience }}
+          tags: ${{ inputs.tags }}
+          hostname: ${{ inputs.hostname }}
+          ping: ${{ inputs.ping }}
+          version: ${{ inputs.version }}
+
+      # The action checks this too, but it catches a failed status read and
+      # still exits 0 on Linux. A throw here is fatal, and it also catches the
+      # case where a swallowed read silently skipped the configured `ping`.
+      - name: verify connection
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! state=$(tailscale status --json | jq -r '.BackendState // "unknown"'); then
+            echo "::error::Could not read the Tailscale backend state"
+            exit 1
+          fi
+
+          if [ "$state" != "Running" ]; then
+            echo "::error::The Tailscale backend did not reach the Running state"
+            echo "backend state: ${state}"
+            exit 1
+          fi
+
+          echo "Tailscale connected, backend state: ${state}"
+
+      - name: run caller script
+        if: ${{ inputs.script != '' }}
+        shell: bash
+        env:
+          SCRIPT: ${{ inputs.script }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -f "$SCRIPT" ]; then
+            echo "::error::The script input did not match a file in the calling repository"
+            echo "resolved path: ${SCRIPT}"
+            exit 1
+          fi
+
+          # `--` stops a leading dash in the path from being read as a bash flag.
+          bash -- "$SCRIPT"

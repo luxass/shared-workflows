@@ -1,0 +1,32 @@
+name: Tailscale
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions: {}
+
+jobs:
+  tailnet:
+    permissions:
+      id-token: write
+      contents: read
+    # A job that calls a reusable workflow cannot set `environment`. The reusable
+    # workflow declares the `tailnet` environment itself, through its own
+    # `environment` input. That means `oauth-client-id` and `audience` have to be
+    # repository or organization secrets, not `tailnet` environment secrets,
+    # because this job runs outside the environment and cannot read those.
+    uses: luxass/shared-workflows/.github/workflows/reusable-tailscale.yaml@v0.13.0 # x-release-please-version
+    with:
+      tags: tag:ci
+      ping: app.example.ts.net
+      # `script` runs a file from this repository with `bash`, once the tailnet
+      # is up. It is the way to run your own checks, such as a service health
+      # request, since a job that calls a reusable workflow cannot declare its
+      # own steps. The job's `id-token: write` is in scope for it, so point it
+      # at a script on a ref you trust.
+      # script: .github/tailscale/smoke.sh
+    secrets:
+      oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      audience: ${{ secrets.TS_AUDIENCE }}
