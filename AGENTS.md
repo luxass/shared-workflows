@@ -33,12 +33,14 @@ Workflows that are meant for consumers must be reusable workflows using `on.work
 - `.github/workflows/reusable-ci-security.yaml`
 - `.github/workflows/reusable-release-npm.yaml`
 
-Workflows without the `reusable-` prefix are only for automation that runs in this repository itself, such as release maintenance or wrappers that exercise the reusable workflows locally. Repository workflows may call a reusable workflow with a local path:
+Workflows without the `reusable-` prefix are only for automation that runs in this repository itself, such as release maintenance or wrappers that exercise the reusable workflows locally. Reference reusable workflows in the same repository with the `$/` self-repository syntax, not the older `./` workspace-relative form.
+
+GitHub resolves a `$/` reference against the repository at the commit that is running and counts it as a pinned reference, so internal calls satisfy policies that require full-length commit SHAs. See GitHub's [changelog post](https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/).
 
 ```yaml
 jobs:
   ci:
-    uses: ./.github/workflows/reusable-ci.yaml
+    uses: $/.github/workflows/reusable-ci.yaml
 ```
 
 External consumers should call a pinned ref:
