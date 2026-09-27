@@ -47,6 +47,9 @@ on:
       audience:
         description: "Tailscale OIDC federated identity audience. Used instead of `oauth-secret`"
         required: false
+      script-env:
+        description: "Shell assignments sourced into the script's environment, as `KEY=value` lines"
+        required: false
 
 permissions: {}
 
@@ -169,6 +172,9 @@ jobs:
         shell: bash
         env:
           SCRIPT: ${{ inputs.script }}
+          # Passed as a secret rather than an input because `with:` cannot read
+          # the `secrets` context, so a caller cannot build the block there.
+          SCRIPT_ENV: ${{ secrets.script-env }}
         run: |
           set -euo pipefail
 
@@ -176,6 +182,23 @@ jobs:
             echo "::error::The script input did not match a file in the calling repository"
             echo "resolved path: ${SCRIPT}"
             exit 1
+          fi
+
+          # Sourced as shell rather than parsed, so quoted values and references
+          # to the existing environment behave the way the caller expects. The
+          # caller already owns the script this runs, so this is not a wider
+          # trust boundary. Scoped to this step, so the Tailscale action never
+          # sees these values.
+          if [ -n "$SCRIPT_ENV" ]; then
+            env_file=$(mktemp)
+            trap 'rm -f "$env_file"' EXIT
+            printf '%s\n' "$SCRIPT_ENV" > "$env_file"
+            set -a
+            # shellcheck disable=SC1090
+            source "$env_file"
+            set +a
+            rm -f "$env_file"
+            trap - EXIT
           fi
 
           # `--` stops a leading dash in the path from being read as a bash flag.

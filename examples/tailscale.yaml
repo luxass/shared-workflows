@@ -14,9 +14,8 @@ jobs:
       contents: read
     # A job that calls a reusable workflow cannot set `environment`. The reusable
     # workflow declares the `tailnet` environment itself, through its own
-    # `environment` input. That means `oauth-client-id` and `audience` have to be
-    # repository or organization secrets, not `tailnet` environment secrets,
-    # because this job runs outside the environment and cannot read those.
+    # `environment` input. Its secrets are still readable here, so every secret
+    # below can stay a `tailnet` environment secret.
     uses: luxass/shared-workflows/.github/workflows/reusable-tailscale.yaml@v0.13.0 # x-release-please-version
     with:
       tags: tag:ci
@@ -30,3 +29,10 @@ jobs:
     secrets:
       oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
       audience: ${{ secrets.TS_AUDIENCE }}
+      # `script-env` is sourced as shell before the script runs, so the script
+      # sees these as ordinary environment variables. It goes here rather than
+      # in `with:` because `with:` cannot read the `secrets` context. It is
+      # scoped to the script step, so the Tailscale step never sees these.
+      script-env: |
+        RELAY_TOKEN=${{ secrets.RELAY_TOKEN }}
+        RELAY_TO=${{ vars.RELAY_TO }}

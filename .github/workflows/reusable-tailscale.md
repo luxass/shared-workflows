@@ -60,7 +60,7 @@ set -euo pipefail
 
 curl --fail-with-body --silent --show-error \
   --connect-timeout 10 --max-time 30 --retry 2 \
-  --header "Authorization: Bearer ${SERVICE_TOKEN}" \
+  --header "Authorization: Bearer ${RELAY_TOKEN}" \
   http://app.example.ts.net:8080/healthz
 ```
 
@@ -69,6 +69,7 @@ The script runs after the connection is verified, and receives these environment
 | Variable | Description |
 | --- | --- |
 | `GITHUB_SERVER_URL`, `GITHUB_REPOSITORY`, `GITHUB_RUN_ID` | Standard GitHub Actions context, useful for building links back to the run. |
+| Whatever you put in `script-env` | Sourced from the block above, so the names are yours to choose. |
 
 ## With An OAuth Client
 
@@ -99,6 +100,7 @@ Instead of workload identity federation, pass `oauth-secret` and leave `audience
 | `oauth-client-id` | Yes | Tailscale OAuth client ID, or OIDC federated identity client ID. |
 | `oauth-secret` | No | Tailscale OAuth client secret. Not needed with workload identity federation. |
 | `audience` | No | Tailscale OIDC federated identity audience. Used instead of `oauth-secret`. |
+| `script-env` | No | Shell assignments sourced into the script's environment, as `KEY=value` lines. |
 
 Authentication requirements:
 
@@ -111,7 +113,22 @@ Passing both, or neither, fails the job before the runner connects.
 
 The job sets the GitHub environment itself, through the `environment` input. A job that calls a reusable workflow cannot declare an `environment` key, so the calling job always runs outside that environment.
 
-That has one consequence worth knowing before you set this up: **the OAuth credentials must be repository or organization secrets, not environment secrets.** The `secrets:` mapping is evaluated in the calling job, which is outside the environment and therefore cannot read the environment's secrets. Environment secrets do work for anything the reusable workflow's own job reads, such as a token used by `script`, because that job does run in the environment.
+The caller's `secrets:` mapping **can** still read that environment's secrets, so `oauth-client-id` and `audience` may stay as `tailnet` environment secrets. This was confirmed by running the workflow against a real tailnet.
+
+Those secrets are **not** injected into the script. Anything the script needs is passed as the `script-env` secret, which the workflow sources into the script's environment:
+
+```yaml
+secrets:
+  oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+  audience: ${{ secrets.TS_AUDIENCE }}
+  script-env: |
+    RELAY_TOKEN=${{ secrets.RELAY_TOKEN }}
+    RELAY_TO=${{ vars.RELAY_TO }}
+```
+
+`script-env` is a secret rather than an input for a specific reason: `with:` cannot read the `secrets` context, so a caller cannot build this block with `with:` at all. The `secrets:` key can, and accepts both `secrets.*` and `vars.*`.
+
+The block is sourced as shell, not parsed as `KEY=value`, so quoted values and references to the existing environment behave the way you would expect from shell. The cost is that any value which is not valid shell breaks the whole block. API tokens and phone numbers are fine; a pasted JSON blob or a value containing a quote is not.
 
 ## Permissions
 
@@ -154,6 +171,7 @@ No other permissions are needed. The workflow does not read the repository by de
 - `inputs.script` runs shell code from the calling repository with `id-token: write` available to that job. Treat it as trusted code and only point it at scripts on trusted refs. Do not add a `pull_request_target` trigger, which this repository treats as banned, and note that for `pull_request` runs from forks GitHub withholds the OIDC token and repository secrets.
 - The `script` path is rejected unless it is a relative path with no parent directory references and no characters outside `[A-Za-z0-9._/-]`.
 - Secret values are never printed, and validation failures name the input or secret without echoing its value.
+- `script-env` is written to a temporary file and sourced into the script step only, then removed. It is never exported to the `connect to tailscale` step, so `tailscale/github-action` does not see those values. It is sourced as shell, which is the same trust level as the `script` it configures, since the caller owns both.
 - The `tags`, `hostname`, `ping`, and `version` checks are fail-fast guards, not a security boundary. `tailscale/github-action` passes all four to `tailscale` as argument vector elements rather than through a shell, so they cannot inject a command. They exist to turn an opaque `tailscale up` failure into a named error at the point of the mistake. `script` is the only input that reaches a shell, and its path is constrained.
 - Tailnet details such as the MagicDNS suffix, node hostnames, and 100.x addresses appear in the log output of `tailscale/github-action` and `tailscale status`. For public repositories this log is public. Avoid putting sensitive internal names in tailnet hostnames if that matters to you.
 
