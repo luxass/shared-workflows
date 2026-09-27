@@ -117,7 +117,7 @@ jobs:
             fail "inputs.hostname must be a single DNS label of letters, digits, and dashes"
           fi
 
-          if [ -n "$PING" ] && [[ ! "$PING" =~ ^[A-Za-z0-9.-]+(:[0-9]+)?(,[A-Za-z0-9.-]+(:[0-9]+)?)*$ ]]; then
+          if [ -n "$PING" ] && [[ ! "$PING" =~ ^[A-Za-z0-9.-]+(,[A-Za-z0-9.-]+)*$ ]]; then
             fail "inputs.ping must be a comma separated list of hostnames or 100.x addresses"
           fi
 

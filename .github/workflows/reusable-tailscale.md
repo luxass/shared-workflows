@@ -27,6 +27,7 @@ jobs:
     with:
       tags: tag:ci
       ping: app.example.ts.net
+      environment: tailnet
     secrets:
       oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
       audience: ${{ secrets.TS_AUDIENCE }}
@@ -46,10 +47,13 @@ jobs:
     with:
       tags: tag:ci
       ping: app.example.ts.net
+      environment: tailnet
       script: .github/tailscale/smoke.sh
     secrets:
       oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
       audience: ${{ secrets.TS_AUDIENCE }}
+      script-env: |
+        RELAY_TOKEN=${{ secrets.RELAY_TOKEN }}
 ```
 
 A service health check belongs in the script rather than in this workflow, so the request method, headers, and authentication stay under the caller's control:
@@ -89,7 +93,7 @@ Instead of workload identity federation, pass `oauth-secret` and leave `audience
 | `environment` | `string` | `tailnet` | GitHub environment to use, for environment-scoped secrets. Must not be empty. |
 | `tags` | `string` | - | Comma separated tailnet tags to apply to the node. Must be a comma separated list of `tag:name` values. |
 | `hostname` | `string` | `""` | Fixed hostname for the node. Letters, digits, and dashes, 1-63 characters, no leading or trailing dash. Tailscale normalizes it to lowercase. |
-| `ping` | `string` | `""` | Comma separated hosts to `tailscale ping` after connecting. |
+| `ping` | `string` | `""` | Comma separated hosts to `tailscale ping` after connecting. MagicDNS names or 100.x addresses, no ports. |
 | `version` | `string` | `latest` | Tailscale CLI version. `latest`, `unstable`, or an exact `x.y.z`. |
 | `script` | `string` | `""` | Optional path to a script in the calling repository, run with `bash` after connecting. |
 
@@ -160,11 +164,13 @@ No other permissions are needed. The workflow does not read the repository by de
     {
       "src": ["tag:ci"],
       "dst": ["tag:ci"],
-      "ip": ["*:*"]
+      "ip": ["*"]
     }
   ]
 }
 ```
+
+`ip` takes network capabilities, not destinations: `["*"]` is every port, and `["tcp:8080"]` narrows to one. The `*:*` form belongs to the legacy `acls` syntax and is not valid in a grant.
 
 ## Security Notes
 

@@ -20,6 +20,9 @@ jobs:
     with:
       tags: tag:ci
       ping: app.example.ts.net
+      # The workflow sets this environment itself, through its own `environment`
+      # input. It defaults to `tailnet`.
+      environment: tailnet
       # `script` runs a file from this repository with `bash`, once the tailnet
       # is up. It is the way to run your own checks, such as a service health
       # request, since a job that calls a reusable workflow cannot declare its
