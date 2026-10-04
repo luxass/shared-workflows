@@ -46,15 +46,17 @@ jobs:
             exit 1
           fi
 
-          if ! payload=$(jq -cn '{
-            thread_name: env.ALERT_TITLE,
-            content: env.ALERT_SUMMARY,
-            applied_tags: (env.ALERT_TAGS | fromjson),
-            allowed_mentions: {parse: []}
-          }' 2>/dev/null); then
-            echo "::error::Applied tags must be valid JSON."
+          payload=$(
+            jq -cn '{
+              thread_name: env.ALERT_TITLE,
+              content: env.ALERT_SUMMARY,
+              applied_tags: (env.ALERT_TAGS | fromjson),
+              allowed_mentions: { parse: [] }
+            }' 2>/dev/null
+          ) || {
+            echo "::error::Could not build the Discord payload."
             exit 1
-          fi
+          }
 
           # Ignore curlrc; curl defaults to no redirects or retries.
           # Supply the secret URL through stdin, and discard response bodies.
