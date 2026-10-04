@@ -46,40 +46,24 @@ jobs:
             exit 1
           fi
 
-          if ! payload=$(jq -cen '
-            env.ALERT_TITLE as $title |
-            env.ALERT_SUMMARY as $summary |
-            (env.ALERT_TAGS | fromjson) as $tags |
-            if ($title | length) < 1 or ($title | length) > 100 or
-               ($summary | length) < 1 or ($summary | length) > 2000 then
-              error("Invalid title or summary length")
-            elif ($tags | type) != "array" then
-              error("Tags must be an array")
-            elif ($tags | length) < 1 or ($tags | length) > 5 then
-              error("Provide 1-5 tags")
-            elif (all($tags[]; type == "string") | not) then
-              error("Tag IDs must be strings")
-            elif (all($tags[]; test("^[0-9]+$")) | not) then
-              error("Tag IDs must be numeric")
-            else
-              {thread_name: $title, content: $summary, applied_tags: $tags,
-               allowed_mentions: {parse: []}}
-            end
-          ' 2>/dev/null); then
-            echo "::error::Provide a title of 1-100 characters, a summary of 1-2000 characters, and a JSON array of 1-5 tag ID strings."
+          if ! payload=$(jq -cn '{
+            thread_name: env.ALERT_TITLE,
+            content: env.ALERT_SUMMARY,
+            applied_tags: (env.ALERT_TAGS | fromjson),
+            allowed_mentions: {parse: []}
+          }' 2>/dev/null); then
+            echo "::error::Applied tags must be valid JSON."
             exit 1
           fi
 
-          # Pass the credential-bearing URL on stdin, not in curl's arguments.
-          # Ignore curlrc, never follow redirects, and make only one attempt.
+          # Ignore curlrc; curl defaults to no redirects or retries.
+          # Supply the secret URL through stdin, and discard response bodies.
           if ! status=$(
             printf 'url = "%s?wait=true"\n' "$DISCORD_WEBHOOK_URL" |
-              curl --disable --config - --silent \
-                --proto '=https' --retry 0 \
-                --connect-timeout 10 --max-time 30 \
-                --request POST --header 'Content-Type: application/json' \
+              curl --disable --config - --silent --max-time 30 \
+                --header 'Content-Type: application/json' \
                 --data-binary "$payload" \
-                --output /dev/null --write-out '%{http_code}' 2>/dev/null
+                --output /dev/null --write-out '%{http_code}'
           ); then
             echo "::error::Discord alert request failed; delivery is uncertain and was not retried."
             exit 1

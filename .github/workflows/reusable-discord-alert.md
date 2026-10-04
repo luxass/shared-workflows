@@ -54,7 +54,7 @@ The notification needs no GitHub permissions. Keep `permissions: {}` at workflow
 
 ## Jobs and limitations
 
-The `notify` job uses curl and jq, provided by the hosted Ubuntu runner. jq validates inputs and builds the JSON payload; curl makes one POST with `wait=true` for server confirmation. The webhook URL goes to curl through stdin, not command-line arguments. Redirects and retries are disabled, response bodies are discarded, and failures use credential-free error messages. HTTP and network failures fail the notification job independently of CI.
+The `notify` job uses curl and jq from the hosted Ubuntu runner. jq builds the payload and parses `applied-tags` as JSON; Discord validates field lengths, tag types, and tag membership. curl makes one POST with `wait=true` and requires a 2xx response. The secret URL goes through stdin, response bodies are discarded, and curl configuration files are ignored. Redirects and retries are not enabled. HTTP and network failures fail the notification job independently of CI.
 
 Requests have a 30-second timeout and no automatic retries, including on rate limits. A timeout can occur after Discord creates the post. Check the forum before manually rerunning a notification, since reruns create new posts and there is no deduplication or status update. Discord validates tag membership and webhook access.
 
