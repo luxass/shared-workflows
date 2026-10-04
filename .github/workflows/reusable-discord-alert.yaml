@@ -1,0 +1,78 @@
+name: Discord forum alert
+
+on:
+  workflow_call:
+    inputs:
+      title:
+        description: "New forum post title, 1-100 characters"
+        type: string
+        required: true
+      summary:
+        description: "Initial post content, 1-2000 characters"
+        type: string
+        required: true
+      applied-tags:
+        description: "JSON array of tag ID strings from the webhook's forum; at least one required"
+        type: string
+        required: true
+    secrets:
+      webhook-url:
+        description: "Incoming webhook URL scoped to the alerts forum; skips when unavailable"
+        required: false
+
+permissions: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: create forum post
+        shell: bash
+        env:
+          ALERT_TITLE: ${{ inputs.title }}
+          ALERT_SUMMARY: ${{ inputs.summary }}
+          ALERT_TAGS: ${{ inputs.applied-tags }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.webhook-url }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$DISCORD_WEBHOOK_URL" ]]; then
+            echo "Discord alert skipped: webhook secret unavailable."
+            exit 0
+          fi
+
+          if [[ ! "$DISCORD_WEBHOOK_URL" =~ ^https://discord\.com/api/(v[0-9]+/)?webhooks/[0-9]+/[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::Expected a Discord incoming webhook URL without query parameters."
+            exit 1
+          fi
+
+          payload=$(
+            jq -cn '{
+              thread_name: env.ALERT_TITLE,
+              content: env.ALERT_SUMMARY,
+              applied_tags: (env.ALERT_TAGS | fromjson),
+              allowed_mentions: { parse: [] }
+            }' 2>/dev/null
+          ) || {
+            echo "::error::Could not build the Discord payload."
+            exit 1
+          }
+
+          # Ignore curlrc; curl defaults to no redirects or retries.
+          # Supply the secret URL through stdin, and discard response bodies.
+          if ! status=$(
+            printf 'url = "%s?wait=true"\n' "$DISCORD_WEBHOOK_URL" |
+              curl --disable --config - --silent --max-time 30 \
+                --header 'Content-Type: application/json' \
+                --data-binary "$payload" \
+                --output /dev/null --write-out '%{http_code}'
+          ); then
+            echo "::error::Discord alert request failed; delivery is uncertain and was not retried."
+            exit 1
+          fi
+
+          if [[ ! "$status" =~ ^2[0-9]{2}$ ]]; then
+            echo "::error::Discord alert failed with HTTP status $status; not retried."
+            exit 1
+          fi
+          echo "Discord forum post created."
