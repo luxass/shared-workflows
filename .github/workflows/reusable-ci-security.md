@@ -78,7 +78,7 @@ When the workflow cannot resolve the called workflow ref through OIDC, it falls 
 | `min-severity` | `string` | `low` | Only show results at or above this severity. Possible values: `unknown`, `informational`, `low`, `medium`, `high`. |
 | `min-confidence` | `string` | `low` | Only show results at or above this confidence level. Possible values: `unknown`, `low`, `medium`, `high`. |
 | `fail-on-findings` | `boolean` | `true` | Fail the workflow when zizmor finds issues. Set to `false` to only upload SARIF results. |
-| `zizmor-version` | `string` | `latest` | Version of zizmor to install with `uvx`. |
+| `zizmor-version` | `string` | `1.32.0` | Version of zizmor to install with `uvx`. Pinned by default, so a new zizmor release cannot add findings or fail callers until shared-workflows updates the pin. Set `latest` to always use the newest release. When the requested version is older than the newest release on PyPI, the workflow adds a warning annotation but does not fail. |
 | `zizmor-args` | `string` | `""` | Additional arguments passed to zizmor. |
 | `always-use-default-config` | `boolean` | `false` | Always use the shared default config, even if the caller repository has its own. |
 
@@ -104,4 +104,4 @@ The caller job should grant:
 | Job | Description |
 | --- | --- |
 | `resolve-workflow-ref` | Resolves the `shared-workflows` owner, repository, and ref from the OIDC `job_workflow_ref` claim. |
-| `zizmor` | Runs zizmor with the configured severity and confidence thresholds, uploads `results.sarif` to code scanning, and optionally fails on findings. |
+| `zizmor` | Warns when the requested zizmor version is older than the latest release, runs zizmor with the configured severity and confidence thresholds, uploads `results.sarif` to code scanning, and optionally fails on findings. |

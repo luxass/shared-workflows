@@ -19,9 +19,9 @@ on:
         type: boolean
         default: true
       zizmor-version:
-        description: "Version of zizmor to install"
+        description: "Version of zizmor to install. Pinned by default so new zizmor releases cannot change results without a shared-workflows release"
         type: string
-        default: "latest"
+        default: "1.32.0"
         required: false
       zizmor-args:
         description: "Additional arguments to pass to zizmor"
@@ -178,6 +178,41 @@ jobs:
             echo "path=${CONFIG_PATH}" >> "$GITHUB_OUTPUT"
           else
             echo "No config found, using zizmor defaults"
+          fi
+
+      # Advisory only: warn when the requested zizmor is older than the newest release.
+      # Never fails the job, so a PyPI outage cannot block callers.
+      - name: check zizmor version
+        continue-on-error: true
+        env:
+          ZIZMOR_VERSION: ${{ inputs.zizmor-version }}
+        run: |
+          set -uo pipefail
+
+          REQUESTED="${ZIZMOR_VERSION#v}"
+          VERSION_PATTERN='^[0-9]+(\.[0-9]+)*$'
+
+          if [ "$REQUESTED" = latest ]; then
+            echo "zizmor-version is latest; skipping version check."
+            exit 0
+          fi
+          if ! [[ "$REQUESTED" =~ $VERSION_PATTERN ]]; then
+            echo "zizmor-version is not a plain release version; skipping version check."
+            exit 0
+          fi
+
+          LATEST=$(curl -fsS --proto '=https' --connect-timeout 5 --max-time 15 \
+            https://pypi.org/pypi/zizmor/json | jq -r '.info.version') || LATEST=""
+          if ! [[ "$LATEST" =~ $VERSION_PATTERN ]]; then
+            echo "Could not determine the latest zizmor release; skipping version check."
+            exit 0
+          fi
+
+          NEWEST=$(printf '%s\n%s\n' "$REQUESTED" "$LATEST" | sort -V | tail -n 1)
+          if [ "$NEWEST" != "$REQUESTED" ]; then
+            echo "::warning title=zizmor is outdated::Using zizmor ${REQUESTED}, but ${LATEST} is the latest release. Update the zizmor-version input or the default pin in shared-workflows."
+          else
+            echo "zizmor ${REQUESTED} is up to date (latest release: ${LATEST})."
           fi
 
       - name: install uv
