@@ -19,9 +19,9 @@ on:
         type: boolean
         default: true
       zizmor-version:
-        description: "Version of zizmor to install"
+        description: "Version of zizmor to install, for example v1.32.0 or latest. Empty uses the version pinned in this workflow"
         type: string
-        default: "latest"
+        default: ""
         required: false
       zizmor-args:
         description: "Additional arguments to pass to zizmor"
@@ -123,6 +123,10 @@ jobs:
       actions: read
       security-events: write
       contents: read
+    env:
+      # Updated by Renovate (customManagers:githubActionsVersions).
+      # renovate: datasource=github-releases depName=zizmorcore/zizmor
+      ZIZMOR_DEFAULT_VERSION: v1.32.0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -180,25 +184,141 @@ jobs:
             echo "No config found, using zizmor defaults"
           fi
 
-      - name: install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-        with:
-          enable-cache: false
-          cache-dependency-glob: ""
-          version: 0.11.6
+      - name: resolve zizmor version
+        id: zizmor-version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_VERSION: ${{ inputs.zizmor-version }}
+        run: |
+          set -euo pipefail
+
+          # Exact release tags only. This also keeps caller input out of API paths and file names.
+          TAG_PATTERN='^v[0-9]+\.[0-9]+\.[0-9]+$'
+
+          # The latest release is reused by the outdated check. Empty when the lookup fails.
+          LATEST_TAG=$(gh api repos/zizmorcore/zizmor/releases/latest --jq '.tag_name' 2> /dev/null || true)
+          if ! [[ "$LATEST_TAG" =~ $TAG_PATTERN ]]; then
+            LATEST_TAG=""
+          fi
+
+          case "$REQUESTED_VERSION" in
+            "")
+              TAG="$ZIZMOR_DEFAULT_VERSION"
+              ;;
+            latest)
+              if [ -z "$LATEST_TAG" ]; then
+                echo "::error::Could not resolve the latest zizmor release. Set zizmor-version to an exact version, for example v1.32.0."
+                exit 1
+              fi
+              TAG="$LATEST_TAG"
+              ;;
+            *)
+              TAG="v${REQUESTED_VERSION#v}"
+              ;;
+          esac
+
+          if ! [[ "$TAG" =~ $TAG_PATTERN ]]; then
+            echo "::error::Invalid zizmor-version. Use an exact version such as v1.32.0, latest, or leave it empty."
+            exit 1
+          fi
+
+          echo "Using zizmor ${TAG}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "latest-tag=${LATEST_TAG}" >> "$GITHUB_OUTPUT"
+
+      # Advisory only: Renovate updates the pin in shared-workflows, but callers can run an
+      # older shared-workflows release or set zizmor-version themselves. Never fails the job.
+      - name: check zizmor version
+        continue-on-error: true
+        env:
+          TAG: ${{ steps.zizmor-version.outputs.tag }}
+          LATEST_TAG: ${{ steps.zizmor-version.outputs.latest-tag }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "Could not determine the latest zizmor release; skipping version check."
+            exit 0
+          fi
+
+          NEWEST=$(printf '%s\n%s\n' "${TAG#v}" "${LATEST_TAG#v}" | sort -V | tail -n 1)
+          if [ "$NEWEST" != "${TAG#v}" ]; then
+            echo "::warning title=zizmor is outdated::Using zizmor ${TAG}, but ${LATEST_TAG} is the latest release. Update the zizmor-version input, or update luxass/shared-workflows."
+          else
+            echo "zizmor ${TAG} is up to date (latest release: ${LATEST_TAG})."
+          fi
+
+      # Downloads the release binary and verifies its signed build provenance before use:
+      # it must be built by zizmor's release workflow, from this exact tag, on a GitHub-hosted
+      # runner. Not cached, so a cached binary can never skip verification.
+      - name: install zizmor
+        id: install-zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.zizmor-version.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          if [ "$RUNNER_OS" != Linux ]; then
+            echo "::error::zizmor installation supports Linux runners only, not ${RUNNER_OS}."
+            exit 1
+          fi
+          case "$RUNNER_ARCH" in
+            X64) ARCH=x86_64 ;;
+            ARM64) ARCH=aarch64 ;;
+            *)
+              echo "::error::Unsupported runner architecture for zizmor: ${RUNNER_ARCH}"
+              exit 1
+              ;;
+          esac
+
+          ASSET="zizmor-${ARCH}-unknown-linux-gnu.tar.gz"
+          INSTALL_DIR=$(mktemp -d "${RUNNER_TEMP}/zizmor.XXXXXX")
+
+          if ! gh release download "$TAG" --repo zizmorcore/zizmor --pattern "$ASSET" --dir "$INSTALL_DIR"; then
+            echo "::error::Could not download ${ASSET} from zizmor ${TAG}. Older zizmor releases have no Linux binaries; use a newer zizmor-version."
+            exit 1
+          fi
+
+          if ! gh attestation verify "${INSTALL_DIR}/${ASSET}" \
+            --repo zizmorcore/zizmor \
+            --signer-workflow zizmorcore/zizmor/.github/workflows/release-binaries.yml \
+            --source-ref "refs/tags/${TAG}" \
+            --deny-self-hosted-runners; then
+            echo "::error::Build provenance verification failed for ${ASSET} from zizmor ${TAG}. Refusing to run it."
+            exit 1
+          fi
+
+          # Extract only the zizmor executable and reject anything that is not a regular file.
+          tar -xzf "${INSTALL_DIR}/${ASSET}" -C "$INSTALL_DIR" --no-same-owner zizmor
+          ZIZMOR_BIN="${INSTALL_DIR}/zizmor"
+          if [ -L "$ZIZMOR_BIN" ] || [ ! -f "$ZIZMOR_BIN" ]; then
+            echo "::error::The zizmor archive did not contain a regular zizmor executable."
+            exit 1
+          fi
+          chmod 0755 "$ZIZMOR_BIN"
+
+          INSTALLED_VERSION=$("$ZIZMOR_BIN" --version)
+          if [ "$INSTALLED_VERSION" != "zizmor ${TAG#v}" ]; then
+            echo "::error::Expected zizmor ${TAG#v}, but the binary reports: ${INSTALLED_VERSION}"
+            exit 1
+          fi
+
+          echo "Installed and verified ${INSTALLED_VERSION}"
+          echo "path=${ZIZMOR_BIN}" >> "$GITHUB_OUTPUT"
 
       - name: run zizmor
         id: zizmor
         env:
           GH_TOKEN: ${{ secrets.token || github.token }}
+          ZIZMOR_BIN: ${{ steps.install-zizmor.outputs.path }}
           ZIZMOR_ARGS: ${{ inputs.zizmor-args }}
-          ZIZMOR_VERSION: ${{ inputs.zizmor-version }}
           ZIZMOR_CONFIG_PATH: ${{ steps.config.outputs.path }}
           MIN_SEVERITY: ${{ inputs.min-severity }}
           MIN_CONFIDENCE: ${{ inputs.min-confidence }}
         run: |
           set +e
-          uvx zizmor@"$ZIZMOR_VERSION" \
+          "$ZIZMOR_BIN" \
             --format sarif \
             --min-severity "${MIN_SEVERITY}" \
             --min-confidence "${MIN_CONFIDENCE}" \
