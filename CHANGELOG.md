@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.15.0](https://github.com/luxass/shared-workflows/compare/v0.14.0...v0.15.0) (2026-11-19)
+
+
+### Features
+
+* **security:** install zizmor from verified release binaries ([#80](https://github.com/luxass/shared-workflows/issues/80)) ([45770c2](https://github.com/luxass/shared-workflows/commit/45770c24f5c67369ff1a41f326dac64deb44affd))
+
+
+### Miscellaneous Chores
+
+* **deps:** update actions/setup to actions/setup/v0.1.6 ([#84](https://github.com/luxass/shared-workflows/issues/84)) ([a23267d](https://github.com/luxass/shared-workflows/commit/a23267d675c90dec5f13525842377964bc87bfce))
+* **deps:** update github actions ([#82](https://github.com/luxass/shared-workflows/issues/82)) ([85e7167](https://github.com/luxass/shared-workflows/commit/85e71672a6495f991438ae808832dccffc47f27f))
+* **main:** release actions/setup 0.1.6 ([#83](https://github.com/luxass/shared-workflows/issues/83)) ([8e84402](https://github.com/luxass/shared-workflows/commit/8e84402c426badbcb2e7db5a88fd69eb41b5313f))
+
 ## [0.14.0](https://github.com/luxass/shared-workflows/compare/v0.13.0...v0.14.0) (2026-09-27)
 
 
