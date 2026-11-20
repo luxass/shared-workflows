@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       release-notes:
-        description: Markdown for the GitHub release
+        description: Optional intro above the generated release notes
         type: string
-        required: true
+        required: false
 
 permissions: {}
 

@@ -6,7 +6,9 @@ The existing tag-triggered npm release workflow does not change.
 
 ## Usage
 
-Copy [the caller example](../../examples/release-npm-staged.yaml) into your repository. Use a ref that contains this workflow. Run the caller from the default branch and provide release notes. Set the next version in the root `package.json` before dispatch. Run one release at a time for a package.
+Copy [the caller example](../../examples/release-npm-staged.yaml) into your repository. Use a ref that contains this workflow. Run the caller from the default branch. Commit the next version in the root `package.json` before dispatch. Run one release at a time for a package.
+
+This workflow does not bump versions. If you use `bumpp`, let it update the manifest but leave tag creation to this workflow. If you switch from a version that only exists on npm, add a baseline Git tag to its source commit so the next changelog has a starting point.
 
 The workflow uses Node.js 24. Pin pnpm 11.3 or newer in `packageManager` and commit the lockfile. Use an npm package that already exists and which you maintain.
 
@@ -23,15 +25,15 @@ Set up [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) for 
 
 | Input | Type | Default | Description |
 | --- | --- | --- | --- |
-| `release-notes` | string | Required | Markdown for the GitHub release. It must not be blank. |
+| `release-notes` | string | Empty | Optional Markdown to add above the generated release notes. |
 | `build` | boolean | `true` | Run `pnpm run build` before staging. |
 
 Grant the caller job `contents: write` and `id-token: write`. The staging job uses repository read access and npm trusted publishing. Only the final job can create tags and GitHub releases.
 
 ## Jobs
 
-1. `validate` rejects requests outside a manual dispatch from the default branch. It also rejects blank release notes.
+1. `validate` rejects requests outside a manual dispatch from the default branch.
 2. `stage` checks out the dispatched commit, installs dependencies, and builds the package. It refuses an already published version. It stages with provenance, using the `latest` npm dist-tag for stable versions and `next` for prereleases. The job summary links to npm. Approve the staged package on npm with 2FA.
-3. `finish` waits for a GitHub environment reviewer. After approval, it polls npm for the exact package version. It creates a lightweight tag on the dispatched commit and publishes the supplied release notes. If the tag exists but does not point directly to that commit, the job fails without moving it.
+3. `finish` waits for a GitHub environment reviewer. After approval, it polls npm for the exact package version. It uses `changelogithub` to generate Markdown from Conventional Commits in the release range. It creates a lightweight tag on the dispatched commit and publishes the notes. If the tag exists but does not point directly to that commit, the job fails without moving it.
 
 If npm does not serve the version before polling ends, wait for npm and rerun failed jobs. Do not dispatch a new run to finalize an already staged version. GitHub environment approval does not approve the package on npm.
