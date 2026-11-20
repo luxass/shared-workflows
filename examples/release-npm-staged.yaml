@@ -3,12 +3,20 @@ name: Release (npm staging)
 on:
   workflow_dispatch:
     inputs:
+      expected-sha:
+        description: Optional exact commit SHA for automated dispatches
+        type: string
+        required: false
       release-notes:
         description: Optional intro above the generated release notes
         type: string
         required: false
 
 permissions: {}
+
+concurrency:
+  group: npm-staged-release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -17,4 +25,5 @@ jobs:
       id-token: write
     uses: luxass/shared-workflows/.github/workflows/reusable-release-npm-staged.yaml@v0.15.0 # x-release-please-version
     with:
+      expected-sha: ${{ inputs.expected-sha }}
       release-notes: ${{ inputs.release-notes }}
