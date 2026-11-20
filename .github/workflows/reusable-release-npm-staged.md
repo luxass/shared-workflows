@@ -19,7 +19,7 @@ Configure two separate GitHub environments:
 | `npm-registry` (default) | Allow only the default branch. Require a reviewer before staging. |
 | `release-approval` (default) | Allow only the default branch. Require a reviewer to resume the workflow after npm approval. |
 
-Set up [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) for the caller repository, caller workflow filename, and your staging environment. In **Allowed actions**, leave `npm stage publish` enabled and disable `npm publish`. The workflow does not use npm tokens or any caller secrets. Make sure that tag rules allow the GitHub Actions token to create `v*` tags.
+Set up [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) for the caller repository, caller workflow filename, and your staging environment. In **Allowed actions**, leave `npm stage publish` enabled. Leave `npm publish` and `npm dist-tag` disabled. The workflow does not use npm tokens or any caller secrets. Make sure that tag rules allow the GitHub Actions token to create `v*` tags.
 
 If you switch from tag-triggered publishing, finish any outstanding releases first. Update the trusted publisher if the caller filename or staging environment changes. Replace the old publish trigger. Tags that this workflow creates with `GITHUB_TOKEN` do not start another workflow on a `push` event.
 
@@ -47,7 +47,7 @@ Grant the caller job `contents: write` and `id-token: write`. The staging job us
 
 1. `validate` requires a dispatch from the default branch. If the caller provides `expected-sha`, the run must target that exact commit.
 2. `stage` checks out the dispatched commit, installs dependencies, and builds the package. It refuses an already published version. It stages with provenance and uses `latest` for stable versions and `next` for prereleases. The job summary links to npm and shows the stage ID to approve with 2FA.
-3. `prepare-release` waits for a GitHub environment reviewer. It compares npm's provenance record against the published tarball digest, staging run attempt, and dispatched commit. It then uses `changelogithub` to generate Markdown from Conventional Commits in the release range.
+3. `prepare-release` waits for a GitHub environment reviewer. It compares the staged and published tarball digests. It also checks that npm's provenance matches that digest, the staging run attempt, and the dispatched commit. It then uses `changelogithub` to generate Markdown from Conventional Commits in the release range.
 4. `publish-release` creates a lightweight tag on the dispatched commit and publishes the notes. It stops if the tag points elsewhere or if a draft release already exists for that tag.
 
-If npm is still processing approval when polling ends, wait for npm and choose **Re-run failed jobs** in the same run. Do not choose **Re-run all jobs** or dispatch a new run to finalize a staged version. The workflow refuses to stage on a rerun. If staging itself fails, inspect npm for the stage ID before starting a new run. Do not approve a stage left by a failed run that cannot finalize it. GitHub approval does not approve the package on npm.
+If npm is still processing approval when polling ends, wait for npm and choose **Re-run failed jobs** in the same run. Do not choose **Re-run all jobs** or dispatch a new run to finalize a staged version. The workflow refuses to stage on a rerun. If staging itself fails, inspect npm for the stage ID before starting a new run. npm can return `409 Conflict` for a version that is already staged but not public. Do not approve a stage left by a failed run that cannot finalize it. GitHub approval does not approve the package on npm.

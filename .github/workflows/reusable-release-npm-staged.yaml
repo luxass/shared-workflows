@@ -64,6 +64,7 @@ jobs:
       version: ${{ steps.package.outputs.version }}
       npm-package-path: ${{ steps.package.outputs.npm-package-path }}
       invocation-id: ${{ steps.stage.outputs.invocation-id }}
+      integrity: ${{ steps.stage.outputs.integrity }}
     steps:
       - name: refuse to stage on a rerun
         if: ${{ github.run_attempt != 1 }}
@@ -125,12 +126,19 @@ jobs:
           APPROVAL_ENVIRONMENT: ${{ inputs.approval-environment }}
         run: |
           set -euo pipefail
-          stage_result=$(pnpm stage publish --registry https://registry.npmjs.org/ --npmrc-auth-file /dev/null \
-            --access public --no-git-checks --tag "$DIST_TAG" --provenance --use-stderr --json)
-          if ! stage_id=$(jq -er --arg name "$PACKAGE" '.[$name].stageId | strings | select(test("^[A-Za-z0-9_-]+$"))' <<< "$stage_result"); then
-            echo '::error::pnpm did not report a stage ID. Inspect npm before trying again.'
+          if ! stage_result=$(pnpm stage publish --registry https://registry.npmjs.org/ --npmrc-auth-file /dev/null \
+            --access public --no-git-checks --tag "$DIST_TAG" --provenance --use-stderr --json); then
+            # Some pnpm versions report failures as JSON on stdout instead of stderr.
+            jq -c '.error // empty' <<< "$stage_result" >&2 || true
+            echo '::error::npm staging failed. Inspect npm before trying again.'
             exit 1
           fi
+          if ! stage_id=$(jq -er --arg name "$PACKAGE" '.[$name].stageId | strings | select(test("^[A-Za-z0-9_-]+$"))' <<< "$stage_result") ||
+             ! integrity=$(jq -er --arg name "$PACKAGE" '.[$name].integrity | strings | select(test("^sha512-[A-Za-z0-9+/]{86}==$"))' <<< "$stage_result"); then
+            echo '::error::pnpm did not return a stage ID and a tarball digest. Inspect npm before trying again.'
+            exit 1
+          fi
+          printf 'integrity=%s\n' "$integrity" >> "$GITHUB_OUTPUT"
           printf 'invocation-id=%s/%s/actions/runs/%s/attempts/%s\n' \
             "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
           printf 'Staged %s@%s with ID %s\n' "$PACKAGE" "$VERSION" "$stage_id"
@@ -157,6 +165,7 @@ jobs:
           VERSION: ${{ needs.stage.outputs.version }}
           NPM_PACKAGE_PATH: ${{ needs.stage.outputs.npm-package-path }}
           STAGING_INVOCATION_ID: ${{ needs.stage.outputs.invocation-id }}
+          STAGED_INTEGRITY: ${{ needs.stage.outputs.integrity }}
         run: |
           set -euo pipefail
           registry=https://registry.npmjs.org
@@ -170,9 +179,9 @@ jobs:
           verify_npm_artifact() {
             local manifest integrity digest
             manifest=$(fetch_npm "$registry/$NPM_PACKAGE_PATH/$VERSION") || return 1
-            integrity=$(jq -er --arg name "$PACKAGE" --arg version "$VERSION" '
+            integrity=$(jq -er --arg name "$PACKAGE" --arg version "$VERSION" --arg staged "$STAGED_INTEGRITY" '
               select(.name == $name and .version == $version and (.dist.tarball | type == "string"))
-              | .dist.integrity | strings | capture("^sha512-(?<base64>[A-Za-z0-9+/]{86}==)$").base64
+              | .dist.integrity | select(. == $staged) | strings | capture("^sha512-(?<base64>[A-Za-z0-9+/]{86}==)$").base64
             ' <<< "$manifest") || return 1
             digest=$(printf '%s' "$integrity" | base64 -d | od -An -v -tx1 | tr -d '[:space:]') || return 1
             fetch_npm "$registry/-/npm/v1/attestations/$NPM_PACKAGE_PATH@$VERSION" |
