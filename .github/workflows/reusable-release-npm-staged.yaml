@@ -1,0 +1,162 @@
+name: Experimental Release (npm staging)
+
+on:
+  workflow_call:
+    inputs:
+      release-notes:
+        description: "Markdown for the GitHub release. Must not be blank."
+        type: string
+        required: true
+      build:
+        description: "Run pnpm build before staging."
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: require a manual release from the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RELEASE_NOTES: ${{ inputs.release-notes }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch || "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+            echo "::error::Dispatch the release from the default branch."
+            exit 1
+          fi
+          if [[ ! "$RELEASE_NOTES" =~ [^[:space:]] ]]; then
+            echo "::error::Release notes must not be blank."
+            exit 1
+          fi
+
+  stage:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm-registry
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      package: ${{ steps.package.outputs.name }}
+      version: ${{ steps.package.outputs.version }}
+      registry-url: ${{ steps.package.outputs.registry-url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: build
+        if: ${{ inputs.build }}
+        run: pnpm run build
+
+      - name: read the package and require an unpublished version
+        id: package
+        run: |
+          set -euo pipefail
+          jq -e '.private != true and .publishConfig.directory == null and .publishConfig.registry == null' package.json > /dev/null || {
+            echo "::error::Expected a public root package with no publish directory or registry override."
+            exit 1
+          }
+          name=$(jq -er '.name | strings' package.json)
+          version=$(jq -er '.version | strings' package.json)
+          if [[ ! "$name" =~ ^(@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$ || ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "::error::Expected an npm package name and a SemVer version without build metadata."
+            exit 1
+          fi
+          encoded_name=$(jq -nr --arg name "$name" '$name | @uri')
+          registry_url="https://registry.npmjs.org/$encoded_name/$version"
+          status=$(curl --silent --show-error --max-time 15 --header 'Cache-Control: no-cache' --output /dev/null --write-out '%{http_code}' "$registry_url")
+          if [[ "$status" != 404 ]]; then
+            echo "::error::Expected npm to return 404 for $name@$version before staging. Got HTTP $status."
+            exit 1
+          fi
+          dist_tag=latest
+          if [[ "$version" == *-* ]]; then dist_tag=next; fi
+          printf 'name=%s\nversion=%s\nregistry-url=%s\ndist-tag=%s\n' "$name" "$version" "$registry_url" "$dist_tag" >> "$GITHUB_OUTPUT"
+
+      - name: stage the package on npm
+        env:
+          DIST_TAG: ${{ steps.package.outputs.dist-tag }}
+          NPM_CONFIG_PROVENANCE: "true"
+        run: pnpm stage publish --registry https://registry.npmjs.org/ --access public --no-git-checks --tag "$DIST_TAG"
+
+      - name: show how to approve the staged package
+        env:
+          PACKAGE: ${{ steps.package.outputs.name }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          {
+            printf '## Ready for npm approval: %s@%s\n\n' "$PACKAGE" "$VERSION"
+            printf 'Approve the version in [Staged Packages](https://www.npmjs.com/package/%s) with npm 2FA.\n' "$PACKAGE"
+            printf 'Then approve the pending release-approval job in this run.\n'
+            printf 'The Git tag and GitHub release wait until npm serves this version.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  finish:
+    needs: stage
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: release-approval
+    permissions:
+      contents: write
+    steps:
+      - name: wait for npm to serve the exact version
+        env:
+          PACKAGE: ${{ needs.stage.outputs.package }}
+          VERSION: ${{ needs.stage.outputs.version }}
+          REGISTRY_URL: ${{ needs.stage.outputs.registry-url }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..20}; do
+            if curl --fail --silent --show-error --max-time 10 --header 'Cache-Control: no-cache' "$REGISTRY_URL" |
+              jq -e --arg name "$PACKAGE" --arg version "$VERSION" '.name == $name and .version == $version and (.dist.tarball | type == "string")' > /dev/null; then
+              exit 0
+            fi
+            if [[ "$attempt" != 20 ]]; then sleep 15; fi
+          done
+          echo "::error::npm does not serve $PACKAGE@$VERSION yet. Once it is live, rerun failed jobs."
+          exit 1
+
+      - name: create the tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.stage.outputs.version }}
+          RELEASE_NOTES: ${{ inputs.release-notes }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          ref_endpoint="repos/$GITHUB_REPOSITORY/git/ref/tags/$tag"
+          if ! ref=$(gh api "$ref_endpoint"); then
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA" > /dev/null
+            ref=$(gh api "$ref_endpoint")
+          fi
+          if ! jq -e --arg sha "$GITHUB_SHA" '.object.type == "commit" and .object.sha == $sha' <<< "$ref" > /dev/null; then
+            echo "::error::Tag $tag is not a lightweight tag at the dispatched commit."
+            exit 1
+          fi
+          if [[ "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft' 2>/dev/null || true)" == false ]]; then
+            echo "GitHub release $tag already exists."
+            exit 0
+          fi
+          args=()
+          if [[ "$VERSION" == *-* ]]; then args+=(--prerelease --latest=false); fi
+          printf '%s\n' "$RELEASE_NOTES" | gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$tag" --notes-file - "${args[@]}"
