@@ -1,8 +1,12 @@
-name: Experimental Release (npm staging)
+name: Release (npm staging)
 
 on:
   workflow_call:
     inputs:
+      expected-sha:
+        description: "Optional commit SHA that the dispatch must target."
+        type: string
+        default: ""
       release-notes:
         description: "Optional Markdown to put above the generated release notes."
         type: string
@@ -19,13 +23,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: require a manual release from the default branch
+      - name: require a dispatch from the default branch
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EXPECTED_SHA: ${{ inputs.expected-sha }}
         run: |
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch || "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
             echo "::error::Dispatch the release from the default branch."
+            exit 1
+          fi
+          if [[ -n "$EXPECTED_SHA" && "$EXPECTED_SHA" != "$GITHUB_SHA" ]]; then
+            echo "::error::The dispatch does not target the expected release commit."
             exit 1
           fi
 
