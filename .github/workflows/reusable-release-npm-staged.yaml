@@ -217,18 +217,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "24"
-          package-manager-cache: false
-
-      - name: generate release notes from conventional commits
-        id: notes
+      - name: prepare the local tag for release notes
+        id: release-tag
         env:
-          GITHUB_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.stage.outputs.version }}
-          RELEASE_NOTES: ${{ inputs.release-notes }}
-        run: | # zizmor: ignore[adhoc-packages] changelogithub is the existing release notes tool, pinned to an exact version
+        run: |
           set -euo pipefail
           tag="v$VERSION"
           if git show-ref --verify --quiet "refs/tags/$tag"; then
@@ -239,8 +232,21 @@ jobs:
           else
             git update-ref "refs/tags/$tag" "$GITHUB_SHA" ""
           fi
+          printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
 
-          npx --yes changelogithub@15.0.5 --to "$tag" --output "$RUNNER_TEMP/changelog.md"
+      - name: generate release notes from conventional commits
+        uses: $/actions/release-notes
+        with:
+          to: ${{ steps.release-tag.outputs.tag }}
+          output: ${{ runner.temp }}/changelog.md
+          github-token: ${{ github.token }}
+
+      - name: attach the optional intro to the release notes
+        id: notes
+        env:
+          RELEASE_NOTES: ${{ inputs.release-notes }}
+        run: |
+          set -euo pipefail
           {
             if [[ "$RELEASE_NOTES" =~ [^[:space:]] ]]; then
               printf '%s\n\n' "$RELEASE_NOTES"

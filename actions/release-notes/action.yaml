@@ -1,0 +1,20 @@
+name: Generate Release Notes
+description: Write release notes from Conventional Commits without installing dependencies
+
+inputs:
+  from:
+    description: Starting tag or commit. Defaults to the previous release tag.
+    required: false
+  to:
+    description: Ending tag or commit. It must already exist locally.
+    required: true
+  output:
+    description: Destination path for the generated Markdown.
+    required: true
+  github-token:
+    description: Optional read-only token for GitHub contributor links.
+    required: false
+
+runs:
+  using: node24
+  main: generate-release-notes.mjs
