@@ -171,21 +171,40 @@ jobs:
           registry=https://registry.npmjs.org
           repository="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
           provenance=https://slsa.dev/provenance/v1
-          fetch_npm() {
-            curl --fail --silent --max-time 10 --header 'Cache-Control: no-cache' "$1"
+          npm_responses=$(mktemp -d "$RUNNER_TEMP/npm-release.XXXXXX")
+          trap 'rm -rf -- "$npm_responses"' EXIT
+
+          fetch_npm_release_data() {
+            local label=$1 url=$2 output=$3 status
+            if ! status=$(curl --silent --show-error --max-time 10 --header 'Cache-Control: no-cache' \
+              --output "$output" --write-out '%{http_code}' "$url"); then
+              printf 'Could not fetch %s from npm. See the curl error above.\n' "$label"
+              return 1
+            fi
+            case "$status" in
+              200) return 0 ;;
+              404) printf 'npm does not serve %s yet (HTTP 404).\n' "$label" ;;
+              *) printf 'npm returned HTTP %s for %s.\n' "$status" "$label" ;;
+            esac
+            return 1
           }
 
           # Read the npm-hosted attestation, and bind its claims to the published tarball.
           verify_npm_artifact() {
-            local manifest integrity digest
-            manifest=$(fetch_npm "$registry/$NPM_PACKAGE_PATH/$VERSION") || return 1
-            integrity=$(jq -er --arg name "$PACKAGE" --arg version "$VERSION" --arg staged "$STAGED_INTEGRITY" '
+            local manifest="$npm_responses/manifest.json" attestations="$npm_responses/attestations.json"
+            local integrity digest
+            fetch_npm_release_data 'the package version' "$registry/$NPM_PACKAGE_PATH/$VERSION" "$manifest" || return 1
+            if ! integrity=$(jq -er --arg name "$PACKAGE" --arg version "$VERSION" --arg staged "$STAGED_INTEGRITY" '
               select(.name == $name and .version == $version and (.dist.tarball | type == "string"))
               | .dist.integrity | select(. == $staged) | strings | capture("^sha512-(?<base64>[A-Za-z0-9+/]{86}==)$").base64
-            ' <<< "$manifest") || return 1
+            ' "$manifest"); then
+              echo 'The published package metadata does not match the staged package and tarball digest.'
+              return 1
+            fi
             digest=$(printf '%s' "$integrity" | base64 -d | od -An -v -tx1 | tr -d '[:space:]') || return 1
-            fetch_npm "$registry/-/npm/v1/attestations/$NPM_PACKAGE_PATH@$VERSION" |
-              jq -e --arg provenance "$provenance" --arg digest "$digest" \
+            fetch_npm_release_data 'the provenance attestation' \
+              "$registry/-/npm/v1/attestations/$NPM_PACKAGE_PATH@$VERSION" "$attestations" || return 1
+            if ! jq -e --arg provenance "$provenance" --arg digest "$digest" \
                 --arg repository "$repository" --arg ref "$GITHUB_REF" --arg sha "$GITHUB_SHA" \
                 --arg invocation "$STAGING_INVOCATION_ID" '
                 any(.attestations[]?;
@@ -199,14 +218,24 @@ jobs:
                       and $build.externalParameters.workflow.ref == $ref
                       and any($build.resolvedDependencies[]?;
                         .uri == ("git+" + $repository + "@" + $ref) and .digest.gitCommit == $sha))
-                  ))' > /dev/null
+                  ))' "$attestations" > /dev/null; then
+              echo 'The npm provenance does not match the staged tarball, workflow run attempt, and commit.'
+              return 1
+            fi
           }
 
-          for attempt in {1..20}; do
+          max_attempts=20
+          retry_seconds=15
+          for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+            printf 'Attempt %s/%s: Checking npm for %s@%s.\n' "$attempt" "$max_attempts" "$PACKAGE" "$VERSION"
             if verify_npm_artifact; then
+              echo 'Verified the published tarball and provenance for this staging run.'
               exit 0
             fi
-            if [[ "$attempt" != 20 ]]; then sleep 15; fi
+            if (( attempt < max_attempts )); then
+              printf 'Retrying in %s seconds.\n' "$retry_seconds"
+              sleep "$retry_seconds"
+            fi
           done
           echo "::error::npm does not serve $PACKAGE@$VERSION with provenance matching the staging run and commit. If npm is still processing approval, rerun failed jobs once it is live. Do not finalize from a different run."
           exit 1
