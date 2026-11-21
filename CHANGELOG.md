@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.16.0](https://github.com/luxass/shared-workflows/compare/v0.15.0...v0.16.0) (2026-11-21)
+
+
+### Features
+
+* **release:** add staged npm publishing workflow ([#85](https://github.com/luxass/shared-workflows/issues/85)) ([37837c4](https://github.com/luxass/shared-workflows/commit/37837c4f2d14ce69a0ffac1198d7e06a8216db27))
+* **release:** generate staged release notes with a local action ([#87](https://github.com/luxass/shared-workflows/issues/87)) ([55edc70](https://github.com/luxass/shared-workflows/commit/55edc7066608909da714b21bb0d62f6e73f2b0ef))
+
+
+### Bug Fixes
+
+* **release:** log npm verification progress ([#90](https://github.com/luxass/shared-workflows/issues/90)) ([9378652](https://github.com/luxass/shared-workflows/commit/9378652d76deed6101947698874c8739949859a1))
+
 ## [0.15.0](https://github.com/luxass/shared-workflows/compare/v0.14.0...v0.15.0) (2026-11-19)
 
 
