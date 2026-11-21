@@ -16,12 +16,13 @@ This repository contains reusable GitHub Actions workflows and composite actions
 
 Each reusable workflow has its own documentation with inputs, secrets, permissions, examples, and operational notes.
 
-## Available Composite Actions
+## Available Actions
 
 | Action | Description |
 | :----- | :---------- |
 | [actions/setup](actions/setup/action.yaml) | Checks out the repository, sets up pnpm and Node.js, and installs dependencies. |
 | [actions/run-pnpm](actions/run-pnpm/action.yaml) | Runs pnpm with caller-provided arguments without shell re-interpretation. |
+| [actions/release-notes](actions/release-notes/README.md) | Writes release notes from Conventional Commits without installing packages. |
 
 ## How To Use A Shared Workflow
 
