@@ -1,0 +1,297 @@
+name: Release (npm staging)
+
+on:
+  workflow_call:
+    inputs:
+      expected-sha:
+        description: "Optional commit SHA that the dispatch must target."
+        type: string
+        default: ""
+      release-notes:
+        description: "Optional Markdown to put above the generated release notes."
+        type: string
+        default: ""
+      build:
+        description: "Run pnpm build before staging."
+        type: boolean
+        default: true
+      environment:
+        description: "GitHub environment that approves staging and is bound to the npm trusted publisher."
+        type: string
+        default: npm-registry
+      approval-environment:
+        description: "GitHub environment that resumes the release after npm approval."
+        type: string
+        default: release-approval
+
+permissions: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: require a dispatch from the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EXPECTED_SHA: ${{ inputs.expected-sha }}
+          PRIVATE_REPOSITORY: ${{ toJSON(github.event.repository.private) }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch || "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+            echo "::error::Dispatch the release from the default branch."
+            exit 1
+          fi
+          if [[ -n "$EXPECTED_SHA" && "$EXPECTED_SHA" != "$GITHUB_SHA" ]]; then
+            echo "::error::The dispatch does not target the expected release commit."
+            exit 1
+          fi
+          if [[ "$PRIVATE_REPOSITORY" != false ]]; then
+            echo "::error::npm provenance requires a public caller repository."
+            exit 1
+          fi
+
+  stage:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      package: ${{ steps.package.outputs.name }}
+      version: ${{ steps.package.outputs.version }}
+      npm-package-path: ${{ steps.package.outputs.npm-package-path }}
+      invocation-id: ${{ steps.stage.outputs.invocation-id }}
+      integrity: ${{ steps.stage.outputs.integrity }}
+    steps:
+      - name: refuse to stage on a rerun
+        if: ${{ github.run_attempt != 1 }}
+        run: |
+          set -euo pipefail
+          echo '::error::Staging is not retried. Inspect npm for an existing staged version before starting a new run.'
+          exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: build
+        if: ${{ inputs.build }}
+        run: pnpm run build
+
+      - name: read the package and require an unpublished version
+        id: package
+        run: |
+          set -euo pipefail
+          jq -e '.private != true and .publishConfig.directory == null and .publishConfig.registry == null' package.json > /dev/null || {
+            echo "::error::Expected a public root package with no publish directory or registry override."
+            exit 1
+          }
+          name=$(jq -er '.name | strings' package.json)
+          version=$(jq -er '.version | strings' package.json)
+          if [[ ! "$name" =~ ^(@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$ || ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "::error::Expected an npm package name and a SemVer version without build metadata."
+            exit 1
+          fi
+          encoded_name=$(jq -nr --arg name "$name" '$name | @uri')
+          registry_url="https://registry.npmjs.org/$encoded_name/$version"
+          status=$(curl --silent --show-error --max-time 15 --header 'Cache-Control: no-cache' --output /dev/null --write-out '%{http_code}' "$registry_url")
+          if [[ "$status" != 404 ]]; then
+            echo "::error::Expected npm to return 404 for $name@$version before staging. Got HTTP $status."
+            exit 1
+          fi
+          dist_tag=latest
+          if [[ "$version" == *-* ]]; then dist_tag=next; fi
+          printf 'name=%s\nversion=%s\nnpm-package-path=%s\ndist-tag=%s\n' "$name" "$version" "$encoded_name" "$dist_tag" >> "$GITHUB_OUTPUT"
+
+      - name: stage the package on npm and record its ID
+        id: stage
+        env:
+          PACKAGE: ${{ steps.package.outputs.name }}
+          VERSION: ${{ steps.package.outputs.version }}
+          DIST_TAG: ${{ steps.package.outputs.dist-tag }}
+          APPROVAL_ENVIRONMENT: ${{ inputs.approval-environment }}
+        run: |
+          set -euo pipefail
+          if ! stage_result=$(pnpm stage publish --registry https://registry.npmjs.org/ --npmrc-auth-file /dev/null \
+            --access public --no-git-checks --tag "$DIST_TAG" --provenance --use-stderr --json); then
+            # Some pnpm versions report failures as JSON on stdout instead of stderr.
+            jq -c '.error // empty' <<< "$stage_result" >&2 || true
+            echo '::error::npm staging failed. Inspect npm before trying again.'
+            exit 1
+          fi
+          if ! stage_id=$(jq -er --arg name "$PACKAGE" '.[$name].stageId | strings | select(test("^[A-Za-z0-9_-]+$"))' <<< "$stage_result") ||
+             ! integrity=$(jq -er --arg name "$PACKAGE" '.[$name].integrity | strings | select(test("^sha512-[A-Za-z0-9+/]{86}==$"))' <<< "$stage_result"); then
+            echo '::error::pnpm did not return a stage ID and a tarball digest. Inspect npm before trying again.'
+            exit 1
+          fi
+          printf 'integrity=%s\n' "$integrity" >> "$GITHUB_OUTPUT"
+          printf 'invocation-id=%s/%s/actions/runs/%s/attempts/%s\n' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+          printf 'Staged %s@%s with ID %s\n' "$PACKAGE" "$VERSION" "$stage_id"
+          {
+            printf '## Ready for npm approval: %s@%s\n\n' "$PACKAGE" "$VERSION"
+            printf 'Approve stage ID %s in [Staged Packages](https://www.npmjs.com/package/%s) with npm 2FA.\n' "$stage_id" "$PACKAGE"
+            printf 'Then approve the pending %s environment in this run.\n' "$APPROVAL_ENVIRONMENT"
+            printf 'The Git tag and GitHub release wait until npm serves the package from this run.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  prepare-release:
+    needs: stage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.approval-environment }}
+    permissions:
+      contents: read
+    outputs:
+      notes: ${{ steps.notes.outputs.notes }}
+    steps:
+      - name: wait for the package from this staging run
+        env:
+          PACKAGE: ${{ needs.stage.outputs.package }}
+          VERSION: ${{ needs.stage.outputs.version }}
+          NPM_PACKAGE_PATH: ${{ needs.stage.outputs.npm-package-path }}
+          STAGING_INVOCATION_ID: ${{ needs.stage.outputs.invocation-id }}
+          STAGED_INTEGRITY: ${{ needs.stage.outputs.integrity }}
+        run: |
+          set -euo pipefail
+          registry=https://registry.npmjs.org
+          repository="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          provenance=https://slsa.dev/provenance/v1
+          fetch_npm() {
+            curl --fail --silent --max-time 10 --header 'Cache-Control: no-cache' "$1"
+          }
+
+          # Read the npm-hosted attestation, and bind its claims to the published tarball.
+          verify_npm_artifact() {
+            local manifest integrity digest
+            manifest=$(fetch_npm "$registry/$NPM_PACKAGE_PATH/$VERSION") || return 1
+            integrity=$(jq -er --arg name "$PACKAGE" --arg version "$VERSION" --arg staged "$STAGED_INTEGRITY" '
+              select(.name == $name and .version == $version and (.dist.tarball | type == "string"))
+              | .dist.integrity | select(. == $staged) | strings | capture("^sha512-(?<base64>[A-Za-z0-9+/]{86}==)$").base64
+            ' <<< "$manifest") || return 1
+            digest=$(printf '%s' "$integrity" | base64 -d | od -An -v -tx1 | tr -d '[:space:]') || return 1
+            fetch_npm "$registry/-/npm/v1/attestations/$NPM_PACKAGE_PATH@$VERSION" |
+              jq -e --arg provenance "$provenance" --arg digest "$digest" \
+                --arg repository "$repository" --arg ref "$GITHUB_REF" --arg sha "$GITHUB_SHA" \
+                --arg invocation "$STAGING_INVOCATION_ID" '
+                any(.attestations[]?;
+                  .predicateType == $provenance and (
+                    .bundle.dsseEnvelope.payload | @base64d | fromjson
+                    | .predicateType == $provenance
+                    and any(.subject[]?; .digest.sha512 == $digest)
+                    and (.predicate.runDetails.metadata.invocationId == $invocation)
+                    and (.predicate.buildDefinition as $build |
+                      $build.externalParameters.workflow.repository == $repository
+                      and $build.externalParameters.workflow.ref == $ref
+                      and any($build.resolvedDependencies[]?;
+                        .uri == ("git+" + $repository + "@" + $ref) and .digest.gitCommit == $sha))
+                  ))' > /dev/null
+          }
+
+          for attempt in {1..20}; do
+            if verify_npm_artifact; then
+              exit 0
+            fi
+            if [[ "$attempt" != 20 ]]; then sleep 15; fi
+          done
+          echo "::error::npm does not serve $PACKAGE@$VERSION with provenance matching the staging run and commit. If npm is still processing approval, rerun failed jobs once it is live. Do not finalize from a different run."
+          exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: generate release notes from conventional commits
+        id: notes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.stage.outputs.version }}
+          RELEASE_NOTES: ${{ inputs.release-notes }}
+        run: | # zizmor: ignore[adhoc-packages] changelogithub is the existing release notes tool, pinned to an exact version
+          set -euo pipefail
+          tag="v$VERSION"
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            if [[ "$(git rev-parse "refs/tags/$tag")" != "$GITHUB_SHA" ]]; then
+              echo "::error::Tag $tag is not a lightweight tag at the dispatched commit."
+              exit 1
+            fi
+          else
+            git update-ref "refs/tags/$tag" "$GITHUB_SHA" ""
+          fi
+
+          npx --yes changelogithub@15.0.5 --to "$tag" --output "$RUNNER_TEMP/changelog.md"
+          {
+            if [[ "$RELEASE_NOTES" =~ [^[:space:]] ]]; then
+              printf '%s\n\n' "$RELEASE_NOTES"
+            fi
+            cat "$RUNNER_TEMP/changelog.md"
+          } > "$RUNNER_TEMP/release-notes.md"
+          encoded_notes=$(base64 -w0 "$RUNNER_TEMP/release-notes.md")
+          if (( ${#encoded_notes} > 120000 )); then
+            echo '::error::Generated release notes exceed the size limit for passing them to the release job.'
+            exit 1
+          fi
+          printf 'notes=%s\n' "$encoded_notes" >> "$GITHUB_OUTPUT"
+
+  publish-release:
+    needs: [stage, prepare-release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: create the tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.stage.outputs.version }}
+          ENCODED_NOTES: ${{ needs.prepare-release.outputs.notes }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          if [[ -z "$ENCODED_NOTES" ]]; then
+            echo '::error::Generated release notes are missing. Do not create a release without them.'
+            exit 1
+          fi
+          printf '%s' "$ENCODED_NOTES" | base64 -d > "$RUNNER_TEMP/release-notes.md"
+          releases=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100")
+          if jq -es --arg tag "$tag" 'any(.[][]; .tag_name == $tag and .draft)' <<< "$releases" > /dev/null; then
+            echo "::error::A draft GitHub release already exists for $tag. Review it before rerunning failed jobs."
+            exit 1
+          fi
+          ref_endpoint="repos/$GITHUB_REPOSITORY/git/ref/tags/$tag"
+          if ! ref=$(gh api "$ref_endpoint"); then
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA" > /dev/null
+            ref=$(gh api "$ref_endpoint")
+          fi
+          if ! jq -e --arg sha "$GITHUB_SHA" '.object.type == "commit" and .object.sha == $sha' <<< "$ref" > /dev/null; then
+            echo "::error::Tag $tag is not a lightweight tag at the dispatched commit."
+            exit 1
+          fi
+          if jq -es --arg tag "$tag" 'any(.[][]; .tag_name == $tag and (.draft | not))' <<< "$releases" > /dev/null; then
+            echo "GitHub release $tag already exists."
+            exit 0
+          fi
+          args=()
+          if [[ "$VERSION" == *-* ]]; then args+=(--prerelease --latest=false); fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$tag" --notes-file "$RUNNER_TEMP/release-notes.md" "${args[@]}"
