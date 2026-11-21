@@ -26,19 +26,22 @@ function makeReleaseGitFixture(t) {
   git('init', '--quiet', '--initial-branch=main');
   let head;
   let timestamp = 1_700_000_000;
-  const commit = (subject, body, branch = 'main') => {
-    const message = body ? `${subject}\n\n${body}\n` : `${subject}\n`;
+  const commitMany = (commits, branch = 'main') => {
     const ref = `refs/heads/${branch}`;
-    const input = [
-      `commit ${ref}`,
-      `committer Example Maintainer <maintainer@example.invalid> ${timestamp++} +0000`,
-      `data ${Buffer.byteLength(message)}`,
-      `${message}${head ? `from ${head}\n` : ''}`,
-    ].join('\n') + '\n';
+    const input = commits.map(({ subject, body }, index) => {
+      const message = body ? `${subject}\n\n${body}\n` : `${subject}\n`;
+      return [
+        `commit ${ref}`,
+        `committer Example Maintainer <maintainer@example.invalid> ${timestamp++} +0000`,
+        `data ${Buffer.byteLength(message)}`,
+        `${message}${index === 0 && head ? `from ${head}\n` : ''}`,
+      ].join('\n');
+    }).join('\n') + '\n';
     execFileSync('git', ['fast-import', '--quiet'], { cwd, env, input });
     if (branch === 'main') head = git('rev-parse', ref);
     return git('rev-parse', '--short', ref);
   };
+  const commit = (subject, body, branch) => commitMany([{ subject, body }], branch);
   const notesPath = join(cwd, 'release-notes.md');
   const generate = (to, from, checkout = cwd) => {
     execFileSync(process.execPath, [generator], {
@@ -48,7 +51,7 @@ function makeReleaseGitFixture(t) {
     });
     return readFileSync(notesPath, 'utf8');
   };
-  return { cwd, git, commit, generate };
+  return { cwd, git, commit, commitMany, generate };
 }
 
 test('formats a stable release with breaking changes, grouped scopes, authors, and links', t => {
@@ -142,6 +145,24 @@ test('rejects a shallow checkout with instructions to fetch full history', t => 
   const shallow = join(cwd, 'shallow');
   git('clone', '--quiet', '--depth=1', `file://${cwd}`, shallow);
   assert.throws(() => generate('HEAD', undefined, shallow), /shallow checkout\. Set fetch-depth: 0/);
+});
+
+test('keeps every entry and the compare link in a changelog with hundreds of commits', t => {
+  const { git, commit, commitMany, generate } = makeReleaseGitFixture(t);
+  commit('feat: add the baseline');
+  git('tag', 'v1.0.0');
+  const entryCount = 360;
+  commitMany(Array.from({ length: entryCount }, (_, index) => ({
+    subject: `fix(schema): update the schema field for release fixture ${index + 1}`,
+  })));
+  git('tag', 'v1.1.0');
+
+  const notes = generate('v1.1.0');
+  assert.deepEqual(
+    Array.from(notes.matchAll(/fixture (\d+) &nbsp;/g), ([, entry]) => Number(entry)),
+    Array.from({ length: entryCount }, (_, index) => index + 1),
+  );
+  assert.match(notes, /compare\/v1\.0\.0\.\.\.v1\.1\.0\)$/);
 });
 
 test('expands known emoji shortcodes without changing spacing or embedded text', () => {
