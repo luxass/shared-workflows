@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/luxass/shared-workflows/compare/v0.17.0...v0.17.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **release:** create GitHub releases through the REST API ([#95](https://github.com/luxass/shared-workflows/issues/95)) ([6a15b72](https://github.com/luxass/shared-workflows/commit/6a15b72a49328f3d0acb5be8d17b17869b55fc0e))
+
 ## [0.17.0](https://github.com/luxass/shared-workflows/compare/v0.16.0...v0.17.0) (2026-11-24)
 
 
