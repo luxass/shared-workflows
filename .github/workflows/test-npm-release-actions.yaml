@@ -19,90 +19,114 @@ on:
 permissions: {}
 
 jobs:
-  verify-real-releases:
-    name: verify ${{ matrix.label }}
+  # Verifies real releases against npm. The run attempt, repository, ref, and commit come from their npm provenance.
+  verify:
+    name: "verify: ${{ matrix.case }}"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
-        # Each entry is a real release with the run attempt, repository, ref, and commit from its npm provenance.
         include:
-          - label: an unscoped package from a manual dispatch
+          - case: accept an unscoped package
+            packages: '[{"name":"cdn-resolve","version":"3.0.0","npm-package-path":"cdn-resolve","integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="}]'
+            invocation-id: https://github.com/luxass/cdn-resolve/actions/runs/45111042174/attempts/1
             repository: luxass/cdn-resolve
             ref: refs/heads/main
             sha: 5c0563c0f907b4b35573b33e18e6dd6ea49e0706
-            invocation-id: https://github.com/luxass/cdn-resolve/actions/runs/45111042174/attempts/1
-            packages: '[{"name":"cdn-resolve","version":"3.0.0","npm-package-path":"cdn-resolve","integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="}]'
-          - label: a scoped package from a manual dispatch
+            missing: '[]'
+          - case: accept a scoped package
+            packages: '[{"name":"@luxass/spectral-ruleset","version":"1.1.2","npm-package-path":"%40luxass%2Fspectral-ruleset","integrity":"sha512-l5AjtYAvD6tvV8CKwrmiRBAVXeHFHSxdd7Ye/Ga9VngZOu2rlZF027vXCDzlaPXVtVdFxkcyNSaDS8/WNpA29A=="}]'
+            invocation-id: https://github.com/luxass/spectral-ruleset/actions/runs/45042474801/attempts/1
             repository: luxass/spectral-ruleset
             ref: refs/heads/main
             sha: b85c5e0bf7fea35e661e51305275c11b29d9b69e
-            invocation-id: https://github.com/luxass/spectral-ruleset/actions/runs/45042474801/attempts/1
-            packages: '[{"name":"@luxass/spectral-ruleset","version":"1.1.2","npm-package-path":"%40luxass%2Fspectral-ruleset","integrity":"sha512-l5AjtYAvD6tvV8CKwrmiRBAVXeHFHSxdd7Ye/Ga9VngZOu2rlZF027vXCDzlaPXVtVdFxkcyNSaDS8/WNpA29A=="}]'
-          - label: commit-parser from a manual dispatch
-            repository: luxass/commit-parser
-            ref: refs/heads/main
-            sha: f1bd10d081a88a20a4c828d1700c1fc74ac6ba8c
-            invocation-id: https://github.com/luxass/commit-parser/actions/runs/45042475390/attempts/1
-            packages: '[{"name":"commit-parser","version":"1.3.2","npm-package-path":"commit-parser","integrity":"sha512-/S5hqzCi7/eeLsE3m9rD7n35LYKHKQOxUSJJgsSaBeqW7Q2rPaP7mewJUfxVMT6yDlhEJIrfsY6Ffufzx3yQRw=="}]'
-          - label: apache-autoindex-parse from a manual dispatch
-            repository: luxass/apache-autoindex-parse
-            ref: refs/heads/main
-            sha: ea8251a985dee60c77a0b3c055f3186b29080ce7
-            invocation-id: https://github.com/luxass/apache-autoindex-parse/actions/runs/45042474922/attempts/1
-            packages: '[{"name":"apache-autoindex-parse","version":"5.0.3","npm-package-path":"apache-autoindex-parse","integrity":"sha512-it00/arwN4BIqbVfX2uH80guDnWm79xFB41UaegWmR+GaIGxQhUNIrZP9dgg9zgyWVsngNtkvw48EPFJ0lCT6A=="}]'
-          - label: jsonc-parse from a manual dispatch
-            repository: luxass/jsonc-parse
-            ref: refs/heads/main
-            sha: 2229c88e9f10f1d1e15ec6034ffb0cd9d38e8a6e
-            invocation-id: https://github.com/luxass/jsonc-parse/actions/runs/44888287442/attempts/1
-            packages: '[{"name":"jsonc-parse","version":"2.1.1","npm-package-path":"jsonc-parse","integrity":"sha512-c5QJkzlruD0fsHfCMmAcHVfCzGEO9s93sT8oOOOFiet+a2lf3GrcZEjw4GE9vJ298/iuAyLoPxcUb4fBMM2qsQ=="}]'
-          - label: vitest-testdirs from a manual dispatch
-            repository: luxass/vitest-testdirs
-            ref: refs/heads/main
-            sha: cec817eb4e0f41f2e50aaa0824c6e162ea6eefed
-            invocation-id: https://github.com/luxass/vitest-testdirs/actions/runs/44978654415/attempts/1
-            packages: '[{"name":"vitest-testdirs","version":"4.5.3","npm-package-path":"vitest-testdirs","integrity":"sha512-nVif3w4V7SHnyWZWPfiNaYg8zWaL7VoKMzYmejP/W+ZJN9tnywjUSennmxyDcpunNulD2LywFDBn4TNNeAHJiQ=="}]'
-          - label: the staged release sandbox
-            repository: luxass/npm-staged-release-sandbox
-            ref: refs/heads/main
-            sha: ead93a6f83cd1d559093a490aa1324c8c4f4de32
-            invocation-id: https://github.com/luxass/npm-staged-release-sandbox/actions/runs/44863751441/attempts/1
-            packages: '[{"name":"@luxass/npm-staged-release-sandbox","version":"0.0.6","npm-package-path":"%40luxass%2Fnpm-staged-release-sandbox","integrity":"sha512-zfC+51aWPpCdzxOHGF6OoRpgo0+WPWUEY/CcqASqoPJ72K5CcvGNX7mOSsiHH2LdW1ZJ0KDpxOchX4kD49IIJg=="}]'
-          - label: a package from an automated dispatch
-            repository: luxass/github-schema
-            ref: refs/heads/main
-            sha: c1de7c8c6dce55de6f3d5cfba1c0f04f9391da1a
-            invocation-id: https://github.com/luxass/github-schema/actions/runs/44868797352/attempts/1
-            packages: '[{"name":"github-schema","version":"1.53.0","npm-package-path":"github-schema","integrity":"sha512-aMZIUKLab6yI3szhs+qXISKZ1mO+pyqwMJaRSf1+lzQtWgbnY+P2wwFZeUik9kVeE0vA9oYBmOIFXOfv5wAdGA=="}]'
-          - label: four workspace packages staged in one run
+            missing: '[]'
+          - case: accept four workspace packages staged in one run
+            packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-cost-explorer","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-cost-explorer","integrity":"sha512-HWvC5MCY2FvCvxVN/5YjdoaKWdszz/UAgwf6g/jYR4ExVgMa3X78dI5EUllDgF7Opq19gyGjOqFAWUDfErdraQ=="},{"name":"@luxass/pi-subagents","version":"0.1.0","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-lnE2S1ADfxvsWTTCLW/Zi0VytGrRoGcwE/r13NzJzVw5V2Jb6eFATFbZrF5YuCvBJWvPXHpwQ6O75gZS096g/Q=="}]'
+            invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
             repository: luxass/agent-extensions
             ref: refs/heads/main
             sha: dfa2c8168e8e905c3f84d02f29dd71b19dc54566
-            invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
-            packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-cost-explorer","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-cost-explorer","integrity":"sha512-HWvC5MCY2FvCvxVN/5YjdoaKWdszz/UAgwf6g/jYR4ExVgMa3X78dI5EUllDgF7Opq19gyGjOqFAWUDfErdraQ=="},{"name":"@luxass/pi-subagents","version":"0.1.0","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-lnE2S1ADfxvsWTTCLW/Zi0VytGrRoGcwE/r13NzJzVw5V2Jb6eFATFbZrF5YuCvBJWvPXHpwQ6O75gZS096g/Q=="}]'
-          - label: a workspace package from a later run
-            repository: luxass/agent-extensions
-            ref: refs/heads/main
-            sha: c8497792edfc2e74591f412f85ae140b17042b76
-            invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44978969691/attempts/1
-            packages: '[{"name":"@luxass/pi-subagents","version":"0.1.1","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-4zl/mntjOkLy6vJqsChJmp3fB6qxtaajJ2RZGl9DkTvQcSlMYm+821AKf4+AWXAtBaYPingWJCesncw5XvDw3g=="}]'
-          - label: an unscoped prerelease built from a tag
+            missing: '[]'
+          - case: accept a prerelease built from a tag
+            packages: '[{"name":"farver","version":"1.0.0-beta.2","npm-package-path":"farver","integrity":"sha512-P8R77f7O6uVvCp/ByoUiQQlPRrLLK+mWlb2o3IqxXyh4PRkt8nIjt+VftuICCE9+gEaRNuz18jG8S0VucvT6rQ=="}]'
+            invocation-id: https://github.com/luxass/farver/actions/runs/39092888905/attempts/1
             repository: luxass/farver
             ref: refs/tags/v1.0.0-beta.2
             sha: 6da0f4b239b82cc14f1f5713985b5efa13c6c346
-            invocation-id: https://github.com/luxass/farver/actions/runs/39092888905/attempts/1
+            missing: '[]'
+          - case: reject another run attempt
+            packages: '[{"name":"cdn-resolve","version":"3.0.0","npm-package-path":"cdn-resolve","integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="}]'
+            invocation-id: https://github.com/luxass/cdn-resolve/actions/runs/45111042174/attempts/2
+            repository: luxass/cdn-resolve
+            ref: refs/heads/main
+            sha: 5c0563c0f907b4b35573b33e18e6dd6ea49e0706
+            missing: '["cdn-resolve@3.0.0"]'
+          - case: reject another commit
+            packages: '[{"name":"cdn-resolve","version":"3.0.0","npm-package-path":"cdn-resolve","integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="}]'
+            invocation-id: https://github.com/luxass/cdn-resolve/actions/runs/45111042174/attempts/1
+            repository: luxass/cdn-resolve
+            ref: refs/heads/main
+            sha: b85c5e0bf7fea35e661e51305275c11b29d9b69e
+            missing: '["cdn-resolve@3.0.0"]'
+          - case: reject another repository
+            packages: '[{"name":"cdn-resolve","version":"3.0.0","npm-package-path":"cdn-resolve","integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="}]'
+            invocation-id: https://github.com/luxass/cdn-resolve/actions/runs/45111042174/attempts/1
+            repository: luxass/spectral-ruleset
+            ref: refs/heads/main
+            sha: 5c0563c0f907b4b35573b33e18e6dd6ea49e0706
+            missing: '["cdn-resolve@3.0.0"]'
+          - case: reject a branch ref for a tag build
             packages: '[{"name":"farver","version":"1.0.0-beta.2","npm-package-path":"farver","integrity":"sha512-P8R77f7O6uVvCp/ByoUiQQlPRrLLK+mWlb2o3IqxXyh4PRkt8nIjt+VftuICCE9+gEaRNuz18jG8S0VucvT6rQ=="}]'
-          - label: a scoped prerelease built from a tag
-            repository: luxass/eslint-config
-            ref: refs/tags/v8.0.0-beta.1
-            sha: 8faec4b73cbdccc5e7aa6cedfdb1181bd9c497dc
-            invocation-id: https://github.com/luxass/eslint-config/actions/runs/34742723671/attempts/1
-            packages: '[{"name":"@luxass/eslint-config","version":"8.0.0-beta.1","npm-package-path":"%40luxass%2Feslint-config","integrity":"sha512-4CpI+ZH3YeUWhnSh9AXQUTsJgTKX2OD7+Utrgarxv94Mt+UEJaFw3LoLDq6SmskLdjZcewEi6WycCGkH8z7zDQ=="}]'
+            invocation-id: https://github.com/luxass/farver/actions/runs/39092888905/attempts/1
+            repository: luxass/farver
+            ref: refs/heads/main
+            sha: 6da0f4b239b82cc14f1f5713985b5efa13c6c346
+            missing: '["farver@1.0.0-beta.2"]'
+          - case: reject swapped tarball digests
+            packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="}]'
+            invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
+            repository: luxass/agent-extensions
+            ref: refs/heads/main
+            sha: dfa2c8168e8e905c3f84d02f29dd71b19dc54566
+            missing: '["@luxass/pi-btw@0.2.2","@luxass/pi-questions@0.2.0"]'
+          - case: keep the served package when another version is not on npm
+            packages: '[{"name":"cdn-resolve","version":"3.0.0","npm-package-path":"cdn-resolve","integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="},{"name":"cdn-resolve","version":"0.0.0-never-published.1","npm-package-path":"cdn-resolve","integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="}]'
+            invocation-id: https://github.com/luxass/cdn-resolve/actions/runs/45111042174/attempts/1
+            repository: luxass/cdn-resolve
+            ref: refs/heads/main
+            sha: 5c0563c0f907b4b35573b33e18e6dd6ea49e0706
+            missing: '["cdn-resolve@0.0.0-never-published.1"]'
+          - case: refuse zero attempts
+            packages: '[{"name":"cdn-resolve","version":"3.0.0","npm-package-path":"cdn-resolve","integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="}]'
+            invocation-id: https://github.com/luxass/cdn-resolve/actions/runs/45111042174/attempts/1
+            repository: luxass/cdn-resolve
+            ref: refs/heads/main
+            sha: 5c0563c0f907b4b35573b33e18e6dd6ea49e0706
+            missing: '[]'
+            max-attempts: "0"
+            outcome: failure
+          - case: refuse a short commit SHA
+            packages: '[{"name":"cdn-resolve","version":"3.0.0","npm-package-path":"cdn-resolve","integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="}]'
+            invocation-id: https://github.com/luxass/cdn-resolve/actions/runs/45111042174/attempts/1
+            repository: luxass/cdn-resolve
+            ref: refs/heads/main
+            sha: 5c0563c
+            missing: '[]'
+            outcome: failure
+          - case: refuse an empty package list
+            packages: '[]'
+            invocation-id: https://github.com/luxass/cdn-resolve/actions/runs/45111042174/attempts/1
+            repository: luxass/cdn-resolve
+            ref: refs/heads/main
+            sha: 5c0563c0f907b4b35573b33e18e6dd6ea49e0706
+            missing: '[]'
+            outcome: failure
     steps:
-      - name: verify the release against npm
-        id: verify
+      - name: run verify-npm-packages
+        id: action
+        continue-on-error: ${{ matrix.outcome == 'failure' }}
         uses: $/actions/verify-npm-packages
         with:
           packages: ${{ matrix.packages }}
@@ -110,305 +134,209 @@ jobs:
           repository: ${{ matrix.repository }}
           ref: ${{ matrix.ref }}
           sha: ${{ matrix.sha }}
-          max-attempts: "1"
+          max-attempts: ${{ matrix.max-attempts || '1' }}
           retry-seconds: "0"
 
-      - name: require every package to verify
+      - name: compare the result with the row
         env:
+          OUTCOME: ${{ steps.action.outcome }}
+          EXPECTED_OUTCOME: ${{ matrix.outcome || 'success' }}
           PACKAGES: ${{ matrix.packages }}
-          VERIFIED: ${{ steps.verify.outputs.verified }}
-          MISSING: ${{ steps.verify.outputs.missing }}
+          EXPECTED_MISSING: ${{ matrix.missing }}
+          VERIFIED: ${{ steps.action.outputs.verified }}
+          MISSING: ${{ steps.action.outputs.missing }}
         run: |
           set -euo pipefail
-          jq -en --argjson expected "$PACKAGES" --argjson verified "$VERIFIED" --argjson missing "$MISSING" \
-            '($verified | sort_by(.name, .version)) == ($expected | sort_by(.name, .version)) and $missing == []' > /dev/null
-          printf 'Verified %s package(s).\n' "$(jq length <<< "$VERIFIED")"
-
-  verify-rejections:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: reject the packages for another run attempt
-        id: wrong-attempt
-        uses: $/actions/verify-npm-packages
-        with:
-          packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-cost-explorer","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-cost-explorer","integrity":"sha512-HWvC5MCY2FvCvxVN/5YjdoaKWdszz/UAgwf6g/jYR4ExVgMa3X78dI5EUllDgF7Opq19gyGjOqFAWUDfErdraQ=="},{"name":"@luxass/pi-subagents","version":"0.1.0","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-lnE2S1ADfxvsWTTCLW/Zi0VytGrRoGcwE/r13NzJzVw5V2Jb6eFATFbZrF5YuCvBJWvPXHpwQ6O75gZS096g/Q=="}]'
-          invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/2
-          repository: luxass/agent-extensions
-          ref: refs/heads/main
-          sha: dfa2c8168e8e905c3f84d02f29dd71b19dc54566
-          max-attempts: "1"
-          retry-seconds: "0"
-
-      - name: reject packages whose tarball digests are swapped
-        id: swapped-digests
-        uses: $/actions/verify-npm-packages
-        with:
-          packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="},{"name":"@luxass/pi-cost-explorer","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-cost-explorer","integrity":"sha512-HWvC5MCY2FvCvxVN/5YjdoaKWdszz/UAgwf6g/jYR4ExVgMa3X78dI5EUllDgF7Opq19gyGjOqFAWUDfErdraQ=="},{"name":"@luxass/pi-subagents","version":"0.1.0","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-lnE2S1ADfxvsWTTCLW/Zi0VytGrRoGcwE/r13NzJzVw5V2Jb6eFATFbZrF5YuCvBJWvPXHpwQ6O75gZS096g/Q=="}]'
-          invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
-          repository: luxass/agent-extensions
-          ref: refs/heads/main
-          sha: dfa2c8168e8e905c3f84d02f29dd71b19dc54566
-          max-attempts: "1"
-          retry-seconds: "0"
-
-      - name: keep the served packages when one version is not on npm
-        id: partial
-        uses: $/actions/verify-npm-packages
-        with:
-          packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-cost-explorer","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-cost-explorer","integrity":"sha512-HWvC5MCY2FvCvxVN/5YjdoaKWdszz/UAgwf6g/jYR4ExVgMa3X78dI5EUllDgF7Opq19gyGjOqFAWUDfErdraQ=="},{"name":"@luxass/pi-subagents","version":"0.1.0","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-lnE2S1ADfxvsWTTCLW/Zi0VytGrRoGcwE/r13NzJzVw5V2Jb6eFATFbZrF5YuCvBJWvPXHpwQ6O75gZS096g/Q=="},{"name":"@luxass/pi-btw","version":"0.0.0-never-published.1","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="}]'
-          invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
-          repository: luxass/agent-extensions
-          ref: refs/heads/main
-          sha: dfa2c8168e8e905c3f84d02f29dd71b19dc54566
-          max-attempts: "1"
-          retry-seconds: "0"
-
-      - name: reject the packages for another commit
-        id: wrong-commit
-        uses: $/actions/verify-npm-packages
-        with:
-          packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-cost-explorer","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-cost-explorer","integrity":"sha512-HWvC5MCY2FvCvxVN/5YjdoaKWdszz/UAgwf6g/jYR4ExVgMa3X78dI5EUllDgF7Opq19gyGjOqFAWUDfErdraQ=="},{"name":"@luxass/pi-subagents","version":"0.1.0","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-lnE2S1ADfxvsWTTCLW/Zi0VytGrRoGcwE/r13NzJzVw5V2Jb6eFATFbZrF5YuCvBJWvPXHpwQ6O75gZS096g/Q=="}]'
-          invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
-          repository: luxass/agent-extensions
-          ref: refs/heads/main
-          sha: c8497792edfc2e74591f412f85ae140b17042b76
-          max-attempts: "1"
-          retry-seconds: "0"
-
-      - name: reject the packages for another repository
-        id: wrong-repository
-        uses: $/actions/verify-npm-packages
-        with:
-          packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-cost-explorer","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-cost-explorer","integrity":"sha512-HWvC5MCY2FvCvxVN/5YjdoaKWdszz/UAgwf6g/jYR4ExVgMa3X78dI5EUllDgF7Opq19gyGjOqFAWUDfErdraQ=="},{"name":"@luxass/pi-subagents","version":"0.1.0","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-lnE2S1ADfxvsWTTCLW/Zi0VytGrRoGcwE/r13NzJzVw5V2Jb6eFATFbZrF5YuCvBJWvPXHpwQ6O75gZS096g/Q=="}]'
-          invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
-          repository: luxass/cdn-resolve
-          ref: refs/heads/main
-          sha: dfa2c8168e8e905c3f84d02f29dd71b19dc54566
-          max-attempts: "1"
-          retry-seconds: "0"
-
-      - name: reject a tag build for a branch ref
-        id: wrong-ref
-        uses: $/actions/verify-npm-packages
-        with:
-          packages: '[{"name":"farver","version":"1.0.0-beta.2","npm-package-path":"farver","integrity":"sha512-P8R77f7O6uVvCp/ByoUiQQlPRrLLK+mWlb2o3IqxXyh4PRkt8nIjt+VftuICCE9+gEaRNuz18jG8S0VucvT6rQ=="}]'
-          invocation-id: https://github.com/luxass/farver/actions/runs/39092888905/attempts/1
-          repository: luxass/farver
-          ref: refs/heads/main
-          sha: 6da0f4b239b82cc14f1f5713985b5efa13c6c346
-          max-attempts: "1"
-          retry-seconds: "0"
-
-      - name: refuse zero attempts
-        id: zero-attempts
-        continue-on-error: true
-        uses: $/actions/verify-npm-packages
-        with:
-          packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-cost-explorer","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-cost-explorer","integrity":"sha512-HWvC5MCY2FvCvxVN/5YjdoaKWdszz/UAgwf6g/jYR4ExVgMa3X78dI5EUllDgF7Opq19gyGjOqFAWUDfErdraQ=="},{"name":"@luxass/pi-subagents","version":"0.1.0","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-lnE2S1ADfxvsWTTCLW/Zi0VytGrRoGcwE/r13NzJzVw5V2Jb6eFATFbZrF5YuCvBJWvPXHpwQ6O75gZS096g/Q=="}]'
-          invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
-          repository: luxass/agent-extensions
-          ref: refs/heads/main
-          sha: dfa2c8168e8e905c3f84d02f29dd71b19dc54566
-          max-attempts: "0"
-          retry-seconds: "0"
-
-      - name: refuse a short commit SHA
-        id: short-sha
-        continue-on-error: true
-        uses: $/actions/verify-npm-packages
-        with:
-          packages: '[{"name":"@luxass/pi-btw","version":"0.2.2","npm-package-path":"%40luxass%2Fpi-btw","integrity":"sha512-aMsGm9ccb5P0WyCyYRzCgPcHEn2SJC24s5vXqYb8ZdgYi+NcGss9+GGFUas6lJ+iGje78nDIdhqf3dIPYCUIig=="},{"name":"@luxass/pi-questions","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-questions","integrity":"sha512-hZh89JyH9ARXY+omvvjyrwNuNbZXkfrzIh6Q93XIXJWmD78mLQGAe01ui7E8nP1bRmElQRpnu8Q7GgyXu8XncA=="},{"name":"@luxass/pi-cost-explorer","version":"0.2.0","npm-package-path":"%40luxass%2Fpi-cost-explorer","integrity":"sha512-HWvC5MCY2FvCvxVN/5YjdoaKWdszz/UAgwf6g/jYR4ExVgMa3X78dI5EUllDgF7Opq19gyGjOqFAWUDfErdraQ=="},{"name":"@luxass/pi-subagents","version":"0.1.0","npm-package-path":"%40luxass%2Fpi-subagents","integrity":"sha512-lnE2S1ADfxvsWTTCLW/Zi0VytGrRoGcwE/r13NzJzVw5V2Jb6eFATFbZrF5YuCvBJWvPXHpwQ6O75gZS096g/Q=="}]'
-          invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
-          repository: luxass/agent-extensions
-          ref: refs/heads/main
-          sha: dfa2c81
-          max-attempts: "1"
-          retry-seconds: "0"
-
-      - name: refuse an empty package list
-        id: no-packages
-        continue-on-error: true
-        uses: $/actions/verify-npm-packages
-        with:
-          packages: '[]'
-          invocation-id: https://github.com/luxass/agent-extensions/actions/runs/44865055360/attempts/1
-          repository: luxass/agent-extensions
-          ref: refs/heads/main
-          sha: dfa2c8168e8e905c3f84d02f29dd71b19dc54566
-          max-attempts: "1"
-          retry-seconds: "0"
-
-      - name: check the rejections
-        env:
-          WRONG_ATTEMPT: ${{ toJSON(steps.wrong-attempt.outputs) }}
-          SWAPPED_DIGESTS: ${{ toJSON(steps.swapped-digests.outputs) }}
-          PARTIAL: ${{ toJSON(steps.partial.outputs) }}
-          WRONG_COMMIT: ${{ toJSON(steps.wrong-commit.outputs) }}
-          WRONG_REPOSITORY: ${{ toJSON(steps.wrong-repository.outputs) }}
-          WRONG_REF: ${{ toJSON(steps.wrong-ref.outputs) }}
-          INVALID_OUTCOMES: ${{ steps.zero-attempts.outcome }} ${{ steps.short-sha.outcome }} ${{ steps.no-packages.outcome }}
-        run: |
-          set -euo pipefail
-          # Each check compares the names and versions that verified and that are missing.
-          check() {
-            local label=$1 outputs=$2 verified=$3 missing=$4
-            if ! jq -e --argjson verified "$verified" --argjson missing "$missing" '
-              def ids: map("\(.name)@\(.version)") | sort;
-              (.verified | fromjson | ids) == ($verified | sort) and (.missing | fromjson | ids) == ($missing | sort)
-            ' <<< "$outputs" > /dev/null; then
-              printf '::error::%s: unexpected result %s\n' "$label" "$outputs"
-              exit 1
-            fi
-            printf '%s: passed\n' "$label"
-          }
-          all='["@luxass/pi-btw@0.2.2","@luxass/pi-questions@0.2.0","@luxass/pi-cost-explorer@0.2.0","@luxass/pi-subagents@0.1.0"]'
-          check 'another run attempt' "$WRONG_ATTEMPT" '[]' "$all"
-          check 'swapped digests' "$SWAPPED_DIGESTS" '["@luxass/pi-cost-explorer@0.2.0","@luxass/pi-subagents@0.1.0"]' '["@luxass/pi-btw@0.2.2","@luxass/pi-questions@0.2.0"]'
-          check 'one unpublished version' "$PARTIAL" "$all" '["@luxass/pi-btw@0.0.0-never-published.1"]'
-          check 'another commit' "$WRONG_COMMIT" '[]' "$all"
-          check 'another repository' "$WRONG_REPOSITORY" '[]' "$all"
-          check 'a branch ref for a tag build' "$WRONG_REF" '[]' '["farver@1.0.0-beta.2"]'
-          if [[ "$INVALID_OUTCOMES" != 'failure failure failure' ]]; then
-            echo "::error::Expected the invalid inputs to fail. Got: $INVALID_OUTCOMES"
+          if [[ "$OUTCOME" != "$EXPECTED_OUTCOME" ]]; then
+            echo "::error::Expected the action to end with $EXPECTED_OUTCOME. Got $OUTCOME."
             exit 1
           fi
-          echo 'invalid inputs: passed'
+          if [[ "$OUTCOME" == success ]]; then
+            # Every package that the row does not list as missing must verify.
+            ids='map("\(.name)@\(.version)") | sort'
+            expected_verified=$(jq -c --argjson missing "$EXPECTED_MISSING" "$ids - \$missing" <<< "$PACKAGES")
+            expected_missing=$(jq -c sort <<< "$EXPECTED_MISSING")
+            verified=$(jq -c "$ids" <<< "$VERIFIED")
+            missing=$(jq -c "$ids" <<< "$MISSING")
+            if [[ "$verified" != "$expected_verified" || "$missing" != "$expected_missing" ]]; then
+              echo "::error::Expected verified $expected_verified and missing $expected_missing. Got verified $verified and missing $missing."
+              exit 1
+            fi
+          fi
+          echo "The action ended with $OUTCOME as expected."
 
-  stage-npm-packages:
+  # Runs stage-npm-packages with a fake pnpm. The npm checks before staging are real.
+  stage:
+    name: "stage: ${{ matrix.case }}"
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: stage a stable package and a prerelease
+            packages: '[{"name":"cdn-resolve","version":"999.0.0","directory":"fixtures/stable","npm-package-path":"cdn-resolve","dist-tag":"latest"},{"name":"@luxass/pi-btw","version":"0.0.0-never-published.1","directory":"fixtures/prerelease","npm-package-path":"%40luxass%2Fpi-btw","dist-tag":"next"}]'
+            calls: '["fixtures/stable latest","fixtures/prerelease next"]'
+            outcome: success
+          - case: stop when a package fails to stage
+            packages: '[{"name":"cdn-resolve","version":"999.0.0","directory":"fixtures/stable","npm-package-path":"cdn-resolve","dist-tag":"latest"},{"name":"@luxass/pi-voice","version":"0.0.0-never-published.1","directory":"fixtures/failing","npm-package-path":"%40luxass%2Fpi-voice","dist-tag":"latest"}]'
+            calls: '["fixtures/stable latest","fixtures/failing latest"]'
+            outcome: failure
+          - case: refuse a result without a stage ID
+            packages: '[{"name":"@luxass/pi-whimsical","version":"0.0.0-never-published.1","directory":"fixtures/no-stage-id","npm-package-path":"%40luxass%2Fpi-whimsical","dist-tag":"latest"}]'
+            calls: '["fixtures/no-stage-id latest"]'
+            outcome: failure
+          - case: refuse a version that npm already serves
+            packages: '[{"name":"cdn-resolve","version":"3.0.0","directory":"fixtures/published","npm-package-path":"cdn-resolve","dist-tag":"latest"}]'
+            calls: '[]'
+            outcome: failure
     steps:
-      - name: create two packages and a fake pnpm that records each call
+      - name: create the fixture packages and a fake pnpm
         run: |
           set -euo pipefail
-          mkdir -p fixtures/app fixtures/core "$RUNNER_TEMP/fake-bin"
-          # npm serves neither version, so the action stages both after its 404 check.
-          printf '{"name":"cdn-resolve","version":"999.0.0"}\n' > fixtures/app/package.json
-          printf '{"name":"@luxass/pi-btw","version":"0.0.0-never-published.1"}\n' > fixtures/core/package.json
+          for fixture in 'stable cdn-resolve 999.0.0' 'prerelease @luxass/pi-btw 0.0.0-never-published.1' \
+            'failing @luxass/pi-voice 0.0.0-never-published.1' 'no-stage-id @luxass/pi-whimsical 0.0.0-never-published.1' \
+            'published cdn-resolve 3.0.0'; do
+            read -r directory name version <<< "$fixture"
+            mkdir -p "fixtures/$directory"
+            jq -n --arg name "$name" --arg version "$version" '{name: $name, version: $version}' > "fixtures/$directory/package.json"
+          done
+          mkdir -p "$RUNNER_TEMP/fake-bin"
+          # The fake requires the staging flags, records the directory and dist-tag, and answers like pnpm.
+          # The fixture directory decides whether staging fails or returns no stage ID.
           cat > "$RUNNER_TEMP/fake-bin/pnpm" <<'FAKE'
           #!/usr/bin/env bash
           set -euo pipefail
-          scenario=$(cat "$RUNNER_TEMP/fake-scenario")
-          printf '%s\t%s\n' "${PWD#"$GITHUB_WORKSPACE"/}" "$*" >> "$RUNNER_TEMP/pnpm-$scenario.log"
+          args=" $* "
+          for flag in ' stage publish ' ' --provenance ' ' --npmrc-auth-file /dev/null ' ' --access public '; do
+            [[ "$args" == *"$flag"* ]] || { echo "fake pnpm: missing$flag" >&2; exit 3; }
+          done
+          [[ "$args" =~ \ --tag\ ([a-z]+)\  ]] || { echo 'fake pnpm: missing --tag' >&2; exit 3; }
+          directory=${PWD#"$GITHUB_WORKSPACE"/}
+          printf '%s %s\n' "$directory" "${BASH_REMATCH[1]}" >> "$RUNNER_TEMP/pnpm-calls.log"
           name=$(jq -r '.name' package.json)
-          if [[ "$scenario" == partial && "$name" == @luxass/pi-btw ]]; then
-            echo '{"error":{"code":"E409","summary":"Conflict"}}'
-            exit 1
-          fi
-          if [[ "$scenario" == no-stage-id ]]; then
-            jq -n --arg name "$name" '{($name): {integrity: "sha512-missing"}}'
-            exit 0
-          fi
-          integrity="sha512-$(printf '%s' "$name" | openssl dgst -sha512 -binary | base64 -w0)"
-          jq -n --arg name "$name" --arg integrity "$integrity" '{($name): {stageId: "stage-\($name | gsub("[^A-Za-z0-9]"; "-"))", integrity: $integrity}}'
+          case "$directory" in
+            fixtures/failing) echo '{"error":{"code":"E409","summary":"Conflict"}}'; exit 1 ;;
+            fixtures/no-stage-id) jq -n --arg name "$name" '{($name): {}}' ;;
+            *)
+              integrity="sha512-$(printf '%s' "$name" | openssl dgst -sha512 -binary | base64 -w0)"
+              jq -n --arg name "$name" --arg integrity "$integrity" '{($name): {stageId: "fake-stage-id", integrity: $integrity}}'
+              ;;
+          esac
           FAKE
           chmod +x "$RUNNER_TEMP/fake-bin/pnpm"
           echo "$RUNNER_TEMP/fake-bin" >> "$GITHUB_PATH"
-          echo success > "$RUNNER_TEMP/fake-scenario"
 
-      - name: stage a stable package and a prerelease
-        id: staged
+      - name: run stage-npm-packages
+        id: action
+        continue-on-error: ${{ matrix.outcome == 'failure' }}
         uses: $/actions/stage-npm-packages
         with:
-          packages: >-
-            [{"name":"cdn-resolve","version":"999.0.0","directory":"fixtures/app","npm-package-path":"cdn-resolve","dist-tag":"latest"},
-            {"name":"@luxass/pi-btw","version":"0.0.0-never-published.1","directory":"fixtures/core","npm-package-path":"%40luxass%2Fpi-btw","dist-tag":"next"}]
+          packages: ${{ matrix.packages }}
           approval-environment: release-approval
 
-      - name: fail the second package
-        run: echo partial > "$RUNNER_TEMP/fake-scenario"
-
-      - name: stop when one package fails to stage
-        id: partial
-        continue-on-error: true
-        uses: $/actions/stage-npm-packages
-        with:
-          packages: >-
-            [{"name":"cdn-resolve","version":"999.0.0","directory":"fixtures/app","npm-package-path":"cdn-resolve","dist-tag":"latest"},
-            {"name":"@luxass/pi-btw","version":"0.0.0-never-published.1","directory":"fixtures/core","npm-package-path":"%40luxass%2Fpi-btw","dist-tag":"next"}]
-          approval-environment: release-approval
-
-      - name: return no stage ID
-        run: echo no-stage-id > "$RUNNER_TEMP/fake-scenario"
-
-      - name: refuse a stage result without a stage ID
-        id: no-stage-id
-        continue-on-error: true
-        uses: $/actions/stage-npm-packages
-        with:
-          packages: '[{"name":"cdn-resolve","version":"999.0.0","directory":"fixtures/app","npm-package-path":"cdn-resolve","dist-tag":"latest"}]'
-          approval-environment: release-approval
-
-      - name: try a published version
-        run: echo published > "$RUNNER_TEMP/fake-scenario"
-
-      - name: refuse to stage a version that npm already serves
-        id: published
-        continue-on-error: true
-        uses: $/actions/stage-npm-packages
-        with:
-          packages: '[{"name":"cdn-resolve","version":"3.0.0","directory":"fixtures/app","npm-package-path":"cdn-resolve","dist-tag":"latest"}]'
-          approval-environment: release-approval
-
-      - name: check the staging calls and results
+      - name: compare the result with the row
         env:
-          STAGED: ${{ steps.staged.outputs.packages }}
-          INVOCATION_ID: ${{ steps.staged.outputs.invocation-id }}
-          OUTCOMES: ${{ steps.partial.outcome }} ${{ steps.no-stage-id.outcome }} ${{ steps.published.outcome }}
+          OUTCOME: ${{ steps.action.outcome }}
+          EXPECTED_OUTCOME: ${{ matrix.outcome }}
+          EXPECTED_CALLS: ${{ matrix.calls }}
+          PACKAGES: ${{ matrix.packages }}
+          STAGED: ${{ steps.action.outputs.packages }}
+          INVOCATION_ID: ${{ steps.action.outputs.invocation-id }}
         run: |
           set -euo pipefail
-          jq -e '
-            length == 2
-            and .[0].name == "cdn-resolve" and .[0]."dist-tag" == "latest" and .[0].directory == "fixtures/app"
-            and .[1].name == "@luxass/pi-btw" and .[1]."dist-tag" == "next" and .[1]."stage-id" == "stage--luxass-pi-btw"
-            and all(.[]; (."stage-id" | test("^[A-Za-z0-9_-]+$")) and (.integrity | test("^sha512-[A-Za-z0-9+/]{86}==$")))
-          ' <<< "$STAGED" > /dev/null
-          [[ "$INVOCATION_ID" == "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT" ]]
-          # Each package is staged from its own directory, with its dist-tag, provenance, and no npm token.
-          for line in 1 2; do
-            entry=$(sed -n "${line}p" "$RUNNER_TEMP/pnpm-success.log")
-            case "$line:$entry" in
-              1:fixtures/app$'\t'*'--tag latest'*|2:fixtures/core$'\t'*'--tag next'*) ;;
-              *) echo "::error::Unexpected pnpm call $line: $entry"; exit 1 ;;
-            esac
-            for flag in 'stage publish' '--provenance' '--npmrc-auth-file /dev/null' '--access public'; do
-              [[ "$entry" == *"$flag"* ]] || { echo "::error::pnpm call $line lacks $flag: $entry"; exit 1; }
-            done
-          done
-          [[ "$(wc -l < "$RUNNER_TEMP/pnpm-success.log")" -eq 2 ]]
-          [[ "$(wc -l < "$RUNNER_TEMP/pnpm-partial.log")" -eq 2 ]]
-          [[ ! -e "$RUNNER_TEMP/pnpm-published.log" ]]
-          if [[ "$OUTCOMES" != 'failure failure failure' ]]; then
-            echo "::error::Expected the partial, missing stage ID, and published cases to fail. Got: $OUTCOMES"
+          calls='[]'
+          if [[ -f "$RUNNER_TEMP/pnpm-calls.log" ]]; then
+            calls=$(jq -Rsc 'split("\n") | map(select(length > 0))' "$RUNNER_TEMP/pnpm-calls.log")
+          fi
+          if [[ "$OUTCOME" != "$EXPECTED_OUTCOME" || "$calls" != "$(jq -c . <<< "$EXPECTED_CALLS")" ]]; then
+            echo "::error::Expected $EXPECTED_OUTCOME with pnpm calls $EXPECTED_CALLS. Got $OUTCOME with $calls."
             exit 1
           fi
-          echo 'Staging passed: both packages staged with the right flags, and the three failure cases failed.'
+          if [[ "$OUTCOME" == success ]]; then
+            # Each staged entry keeps its input fields and adds the stage ID and tarball digest.
+            jq -en --argjson packages "$PACKAGES" --argjson staged "$STAGED" '
+              ($staged | map(del(."stage-id", .integrity))) == $packages
+              and all($staged[]; ."stage-id" == "fake-stage-id" and (.integrity | test("^sha512-[A-Za-z0-9+/]{86}==$")))
+            ' > /dev/null
+            [[ "$INVOCATION_ID" == "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT" ]]
+          fi
+          echo "The action ended with $OUTCOME after the expected pnpm calls."
 
-  create-github-releases:
+  # Runs create-github-releases with a fake gh that keeps tags and releases in files.
+  release:
+    name: "release: ${{ matrix.case }}"
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: create a tag and release for each entry
+            input: three
+            existing-releases: '[]'
+            existing-tags: '{}'
+            created: '[{"tag":"@scope/a@1.0.0","prerelease":false,"latest":true},{"tag":"@scope/b@2.0.0-beta.1","prerelease":true,"latest":false},{"tag":"v3.0.0","prerelease":false,"latest":true}]'
+            outcome: success
+          - case: create nothing on a rerun
+            input: three
+            existing-releases: '[{"tag_name":"@scope/a@1.0.0","draft":false},{"tag_name":"@scope/b@2.0.0-beta.1","draft":false},{"tag_name":"v3.0.0","draft":false}]'
+            existing-tags: '{"@scope/a@1.0.0":"current","@scope/b@2.0.0-beta.1":"current","v3.0.0":"current"}'
+            created: '[]'
+            outcome: success
+          - case: continue past a draft and a tag at another commit
+            input: three
+            existing-releases: '[{"tag_name":"@scope/a@1.0.0","draft":true}]'
+            existing-tags: '{"@scope/b@2.0.0-beta.1":"0000000000000000000000000000000000000000"}'
+            created: '[{"tag":"v3.0.0","prerelease":false,"latest":true}]'
+            outcome: failure
+          - case: refuse malformed release data
+            input: malformed
+            existing-releases: '[]'
+            existing-tags: '{}'
+            created: '[]'
+            outcome: failure
+          - case: refuse an empty release list
+            input: empty
+            existing-releases: '[]'
+            existing-tags: '{}'
+            created: '[]'
+            outcome: failure
+    env:
+      RELEASES_INPUT: '[{"tag":"@scope/a@1.0.0","version":"1.0.0","notes":"A notes"},{"tag":"@scope/b@2.0.0-beta.1","version":"2.0.0-beta.1","notes":"B notes"},{"tag":"v3.0.0","version":"3.0.0","notes":"### Features\n\n- C notes"}]'
     steps:
-      - name: create a fake gh that stores tags and releases
+      - name: create the starting state and a fake gh
+        env:
+          INPUT: ${{ matrix.input }}
+          EXISTING_RELEASES: ${{ matrix.existing-releases }}
+          EXISTING_TAGS: ${{ matrix.existing-tags }}
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/fake-bin"
+          state="$RUNNER_TEMP/gh"
+          mkdir -p "$state" "$RUNNER_TEMP/fake-bin"
+          printf '%s' "$EXISTING_RELEASES" > "$state/releases.json"
+          jq --arg sha "$GITHUB_SHA" 'map_values(if . == "current" then $sha else . end)' <<< "$EXISTING_TAGS" > "$state/tags.json"
+          echo '{}' > "$state/created-tags.json"
+          echo '[]' > "$state/created-releases.json"
+          # The fake answers the calls that the action makes, and records the tags and releases it creates.
           cat > "$RUNNER_TEMP/fake-bin/gh" <<'FAKE'
           #!/usr/bin/env bash
           set -euo pipefail
-          state="$RUNNER_TEMP/gh-$(cat "$RUNNER_TEMP/fake-scenario")"
+          state="$RUNNER_TEMP/gh"
           printf '%s\n' "$*" >> "$state/calls.log"
-          if [[ "$1" == api && "$2" == --paginate ]]; then
+          update() { jq "${@:2}" "$state/$1" > "$state/$1.tmp" && mv "$state/$1.tmp" "$state/$1"; }
+          if [[ "$1 $2" == 'api --paginate' ]]; then
             cat "$state/releases.json"
           elif [[ "$1" == api && "$2" == */git/ref/tags/* ]]; then
             sha=$(jq -r --arg tag "${2#*/git/ref/tags/}" '.[$tag] // empty' "$state/tags.json")
-            if [[ -z "$sha" ]]; then echo 'gh: Not Found (HTTP 404)' >&2; exit 1; fi
+            [[ -n "$sha" ]] || { echo 'gh: Not Found (HTTP 404)' >&2; exit 1; }
             jq -n --arg sha "$sha" '{object: {type: "commit", sha: $sha}}'
           elif [[ "$1" == api && "$2" == */git/refs ]]; then
-            jq --arg tag "${4#ref=refs/tags/}" --arg sha "${6#sha=}" '. + {($tag): $sha}' "$state/tags.json" > "$state/tags.tmp"
-            mv "$state/tags.tmp" "$state/tags.json"
+            tag=${4#ref=refs/tags/} sha=${6#sha=}
+            update tags.json --arg tag "$tag" --arg sha "$sha" '. + {($tag): $sha}'
+            update created-tags.json --arg tag "$tag" --arg sha "$sha" '. + {($tag): $sha}'
             echo '{}'
-          elif [[ "$1" == release && "$2" == create ]]; then
+          elif [[ "$1 $2" == 'release create' ]]; then
             tag=$3 prerelease=false latest=true notes=''
             shift 3
             while (( $# > 0 )); do
@@ -419,88 +347,54 @@ jobs:
               esac
               shift
             done
-            jq --arg tag "$tag" --argjson prerelease "$prerelease" --argjson latest "$latest" --arg notes "$notes" \
-              '. + [{tag_name: $tag, draft: false, prerelease: $prerelease, latest: $latest, body: $notes}]' "$state/releases.json" > "$state/releases.tmp"
-            mv "$state/releases.tmp" "$state/releases.json"
+            update releases.json --arg tag "$tag" '. + [{tag_name: $tag, draft: false}]'
+            update created-releases.json --arg tag "$tag" --argjson prerelease "$prerelease" --argjson latest "$latest" --arg notes "$notes" \
+              '. + [{tag: $tag, prerelease: $prerelease, latest: $latest, notes: $notes}]'
           else
-            echo "unexpected gh call: $*" >&2
+            echo "fake gh: unexpected call: $*" >&2
             exit 2
           fi
           FAKE
           chmod +x "$RUNNER_TEMP/fake-bin/gh"
           echo "$RUNNER_TEMP/fake-bin" >> "$GITHUB_PATH"
-          for scenario in first conflicts malformed empty; do
-            mkdir -p "$RUNNER_TEMP/gh-$scenario"
-            echo '[]' > "$RUNNER_TEMP/gh-$scenario/releases.json"
-            echo '{}' > "$RUNNER_TEMP/gh-$scenario/tags.json"
-          done
-          # A draft for the first release and a tag at another commit for the second.
-          echo '[{"tag_name":"@scope/a@1.0.0","draft":true}]' > "$RUNNER_TEMP/gh-conflicts/releases.json"
-          echo '{"@scope/b@2.0.0-beta.1":"0000000000000000000000000000000000000000"}' > "$RUNNER_TEMP/gh-conflicts/tags.json"
-          releases='[{"tag":"@scope/a@1.0.0","version":"1.0.0","notes":"A notes"},{"tag":"@scope/b@2.0.0-beta.1","version":"2.0.0-beta.1","notes":"B notes"},{"tag":"v3.0.0","version":"3.0.0","notes":"### Features\n\n- C notes"}]'
-          printf 'RELEASES=%s\n' "$(printf '%s' "$releases" | base64 -w0)" >> "$GITHUB_ENV"
-          printf 'EMPTY_RELEASES=%s\n' "$(printf '[]' | base64 -w0)" >> "$GITHUB_ENV"
-          echo first > "$RUNNER_TEMP/fake-scenario"
+          case "$INPUT" in
+            three) encoded=$(printf '%s' "$RELEASES_INPUT" | base64 -w0) ;;
+            empty) encoded=$(printf '[]' | base64 -w0) ;;
+            malformed) encoded=$(printf 'not json' | base64 -w0) ;;
+          esac
+          printf 'RELEASES=%s\n' "$encoded" >> "$GITHUB_ENV"
 
-      - name: create three releases
+      - name: run create-github-releases
+        id: action
+        continue-on-error: ${{ matrix.outcome == 'failure' }}
         uses: $/actions/create-github-releases
         with:
           releases: ${{ env.RELEASES }}
 
-      - name: rerun with the same releases
-        id: rerun
-        uses: $/actions/create-github-releases
-        with:
-          releases: ${{ env.RELEASES }}
-
-      - name: use the conflicting state
-        run: echo conflicts > "$RUNNER_TEMP/fake-scenario"
-
-      - name: continue past a draft and a tag at another commit
-        id: conflicts
-        continue-on-error: true
-        uses: $/actions/create-github-releases
-        with:
-          releases: ${{ env.RELEASES }}
-
-      - name: use the malformed state
-        run: echo malformed > "$RUNNER_TEMP/fake-scenario"
-
-      - name: refuse malformed release data
-        id: malformed
-        continue-on-error: true
-        uses: $/actions/create-github-releases
-        with:
-          releases: bm90IGpzb24=
-
-      - name: refuse an empty release list
-        id: empty
-        continue-on-error: true
-        uses: $/actions/create-github-releases
-        with:
-          releases: ${{ env.EMPTY_RELEASES }}
-
-      - name: check the tags and releases
+      - name: compare the result with the row
         env:
-          OUTCOMES: ${{ steps.rerun.outcome }} ${{ steps.conflicts.outcome }} ${{ steps.malformed.outcome }} ${{ steps.empty.outcome }}
+          OUTCOME: ${{ steps.action.outcome }}
+          EXPECTED_OUTCOME: ${{ matrix.outcome }}
+          EXPECTED_CREATED: ${{ matrix.created }}
+          INPUT: ${{ matrix.input }}
         run: |
           set -euo pipefail
-          first="$RUNNER_TEMP/gh-first"
-          jq -e --arg sha "$GITHUB_SHA" '. == {"@scope/a@1.0.0": $sha, "@scope/b@2.0.0-beta.1": $sha, "v3.0.0": $sha}' "$first/tags.json" > /dev/null
-          jq -e '
-            length == 3
-            and (map(select(.tag_name == "@scope/a@1.0.0" and .prerelease == false and .latest == true and .body == "A notes")) | length) == 1
-            and (map(select(.tag_name == "@scope/b@2.0.0-beta.1" and .prerelease == true and .latest == false and .body == "B notes")) | length) == 1
-            and (map(select(.tag_name == "v3.0.0" and .prerelease == false and (.body | startswith("### Features")))) | length) == 1
-          ' "$first/releases.json" > /dev/null
-          # The rerun created no tags or releases.
-          [[ "$(grep -c '^release create' "$first/calls.log")" -eq 3 && "$(grep -c '/git/refs ' "$first/calls.log")" -eq 3 ]]
-          conflicts="$RUNNER_TEMP/gh-conflicts"
-          jq -e '[.[] | select(.draft | not) | .tag_name] == ["v3.0.0"]' "$conflicts/releases.json" > /dev/null
-          jq -e --arg sha "$GITHUB_SHA" '."v3.0.0" == $sha and ."@scope/b@2.0.0-beta.1" == "0000000000000000000000000000000000000000"' "$conflicts/tags.json" > /dev/null
-          [[ ! -s "$RUNNER_TEMP/gh-malformed/calls.log" ]]
-          if [[ "$OUTCOMES" != 'success failure failure failure' ]]; then
-            echo "::error::Expected the rerun to pass and the conflicts, malformed, and empty cases to fail. Got: $OUTCOMES"
+          state="$RUNNER_TEMP/gh"
+          created=$(jq -c 'map({tag, prerelease, latest}) | sort_by(.tag)' "$state/created-releases.json")
+          expected=$(jq -c 'sort_by(.tag)' <<< "$EXPECTED_CREATED")
+          if [[ "$OUTCOME" != "$EXPECTED_OUTCOME" || "$created" != "$expected" ]]; then
+            echo "::error::Expected $EXPECTED_OUTCOME with releases $expected. Got $OUTCOME with $created."
             exit 1
           fi
-          echo 'Releases passed: tags and releases match, the rerun was a no-op, and conflicts only stopped their own package.'
+          # Each created release has a new tag at the run's commit and the notes from the input.
+          jq -en --arg sha "$GITHUB_SHA" --argjson releases "$(cat "$state/created-releases.json")" --argjson input "$RELEASES_INPUT" '
+            input as $tags
+            | ($tags | keys | sort) == ($releases | map(.tag) | sort)
+            and all($tags[]; . == $sha)
+            and all($releases[]; .tag as $tag | .notes == ($input[] | select(.tag == $tag) | .notes))
+          ' "$state/created-tags.json" > /dev/null
+          if [[ "$INPUT" != three && -e "$state/calls.log" ]]; then
+            echo '::error::The action called gh before it validated the release data.'
+            exit 1
+          fi
+          echo "The action ended with $OUTCOME and created $created."
