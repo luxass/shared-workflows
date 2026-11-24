@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/luxass/shared-workflows/compare/v0.16.0...v0.17.0) (2026-11-24)
+
+
+### Features
+
+* **release:** add stage, verify, and release actions for staged npm releases ([#92](https://github.com/luxass/shared-workflows/issues/92)) ([79f5280](https://github.com/luxass/shared-workflows/commit/79f52801c11a2134a9efc8257e42ce4b96498fa7))
+* **release:** add staged npm publishing for pnpm workspaces ([#91](https://github.com/luxass/shared-workflows/issues/91)) ([c2021ef](https://github.com/luxass/shared-workflows/commit/c2021ef8c5d485b7106670010b8897cf83f3cc1d))
+
+
+### Miscellaneous Chores
+
+* **deps:** update github/codeql-action action to v4.39.4 ([#86](https://github.com/luxass/shared-workflows/issues/86)) ([757445f](https://github.com/luxass/shared-workflows/commit/757445fcfe8f6e98224a9bc6d9ec05617f3bbf86))
+
 ## [0.16.0](https://github.com/luxass/shared-workflows/compare/v0.15.0...v0.16.0) (2026-11-21)
 
 
