@@ -12,6 +12,7 @@ This repository contains reusable GitHub Actions workflows and composite actions
 | [reusable-ci-security.yaml](.github/workflows/reusable-ci-security.yaml) | Runs zizmor security analysis for GitHub Actions and uploads SARIF results. | [Docs](.github/workflows/reusable-ci-security.md) | [Example](examples/ci-security.yaml) |
 | [reusable-release-npm.yaml](.github/workflows/reusable-release-npm.yaml) | Publishes packages to npm with OIDC provenance. | [Docs](.github/workflows/reusable-release-npm.md) | [Example](examples/release-npm.yaml) |
 | [reusable-release-npm-staged.yaml](.github/workflows/reusable-release-npm-staged.yaml) | Stages a package and waits for npm before releasing on GitHub. | [Docs](.github/workflows/reusable-release-npm-staged.md) | [Example](examples/release-npm-staged.yaml) |
+| [reusable-release-npm-staged-workspace.yaml](.github/workflows/reusable-release-npm-staged-workspace.yaml) | Stages the unpublished packages of a pnpm workspace and waits for npm before releasing each one on GitHub. | [Docs](.github/workflows/reusable-release-npm-staged-workspace.md) | [Example](examples/release-npm-staged-workspace.yaml) |
 | [reusable-tailscale.yaml](.github/workflows/reusable-tailscale.yaml) | Connects a job to a Tailscale tailnet and verifies the connection. | [Docs](.github/workflows/reusable-tailscale.md) | [Example](examples/tailscale.yaml) |
 
 Each reusable workflow has its own documentation with inputs, secrets, permissions, examples, and operational notes.
@@ -65,6 +66,7 @@ Examples use top-level `permissions: {}` and grant the required permissions on e
 - [CI Security](examples/ci-security.yaml)
 - [Release (npm)](examples/release-npm.yaml)
 - [Release (npm staging)](examples/release-npm-staged.yaml)
+- [Release workspace (npm staging)](examples/release-npm-staged-workspace.yaml)
 - [Tailscale](examples/tailscale.yaml)
 
 ## Contributing
