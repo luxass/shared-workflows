@@ -83,7 +83,7 @@ runs:
           "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
         {
           printf '## Ready for npm approval\n\n'
-          printf 'Approve each stage ID on its package page under **Staged Packages** with npm 2FA:\n\n'
+          printf 'Approve each stage ID on its package page under **Staged Packages** with npm 2FA, in this order:\n\n'
           jq -r '.[] | "- [`\(.name)@\(.version)`](https://www.npmjs.com/package/\(.name)): stage ID \(."stage-id")"' <<< "$staged"
           printf '\nThen approve the pending %s environment in this run.\n' "$APPROVAL_ENVIRONMENT"
           printf 'The Git tags and GitHub releases wait until npm serves each package from this run.\n'
