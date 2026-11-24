@@ -1,0 +1,89 @@
+name: Test npm Release Actions
+
+on:
+  pull_request:
+    paths:
+      - "actions/stage-npm-packages/**"
+      - "actions/verify-npm-packages/**"
+      - "actions/create-github-releases/**"
+      - ".github/workflows/test-npm-release-actions.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "actions/stage-npm-packages/**"
+      - "actions/verify-npm-packages/**"
+      - "actions/create-github-releases/**"
+      - ".github/workflows/test-npm-release-actions.yaml"
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      # cdn-resolve@3.0.0 was staged by reusable-release-npm-staged.yaml in this run attempt and commit.
+      STAGED_PACKAGES: >-
+        [{"name":"cdn-resolve","version":"3.0.0","directory":".","npm-package-path":"cdn-resolve","dist-tag":"latest",
+        "integrity":"sha512-rhRaZanH/3aspp9Kl3I+ZWJNLF450hKA0nJ/uyd/f7Dpdc9e2ZnN2kaJhowGVJnW2Jh5y2LjTRv0j1nP+Z3FmA=="}]
+      STAGING_RUN: https://github.com/luxass/cdn-resolve/actions/runs/45111042174
+      RELEASE_SHA: 5c0563c0f907b4b35573b33e18e6dd6ea49e0706
+    steps:
+      - name: verify a package from its staging run
+        id: verified
+        uses: $/actions/verify-npm-packages
+        with:
+          packages: ${{ env.STAGED_PACKAGES }}
+          invocation-id: ${{ env.STAGING_RUN }}/attempts/1
+          repository: luxass/cdn-resolve
+          ref: refs/heads/main
+          sha: ${{ env.RELEASE_SHA }}
+          max-attempts: "1"
+          retry-seconds: "0"
+
+      - name: reject the same package for another run attempt
+        id: rejected
+        uses: $/actions/verify-npm-packages
+        with:
+          packages: ${{ env.STAGED_PACKAGES }}
+          invocation-id: ${{ env.STAGING_RUN }}/attempts/2
+          repository: luxass/cdn-resolve
+          ref: refs/heads/main
+          sha: ${{ env.RELEASE_SHA }}
+          max-attempts: "1"
+          retry-seconds: "0"
+
+      - name: refuse to stage a version that npm already serves
+        id: published
+        continue-on-error: true
+        uses: $/actions/stage-npm-packages
+        with:
+          packages: ${{ env.STAGED_PACKAGES }}
+          approval-environment: release-approval
+
+      - name: refuse malformed release data
+        id: malformed
+        continue-on-error: true
+        uses: $/actions/create-github-releases
+        with:
+          releases: bm90IGpzb24=
+
+      - name: check the results
+        env:
+          VERIFIED: ${{ steps.verified.outputs.verified }}
+          VERIFIED_MISSING: ${{ steps.verified.outputs.missing }}
+          REJECTED: ${{ steps.rejected.outputs.verified }}
+          REJECTED_MISSING: ${{ steps.rejected.outputs.missing }}
+          STAGE_OUTCOME: ${{ steps.published.outcome }}
+          RELEASE_OUTCOME: ${{ steps.malformed.outcome }}
+        run: |
+          set -euo pipefail
+          jq -e 'length == 1 and .[0].name == "cdn-resolve" and .[0].directory == "."' <<< "$VERIFIED" > /dev/null
+          jq -e 'length == 0' <<< "$VERIFIED_MISSING" > /dev/null
+          jq -e 'length == 0' <<< "$REJECTED" > /dev/null
+          jq -e 'length == 1 and .[0].version == "3.0.0"' <<< "$REJECTED_MISSING" > /dev/null
+          [[ "$STAGE_OUTCOME" == failure && "$RELEASE_OUTCOME" == failure ]]
+          echo 'Verification accepts the real staging run, rejects another attempt, and both refusals fail.'

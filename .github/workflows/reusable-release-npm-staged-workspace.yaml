@@ -203,69 +203,10 @@ jobs:
 
       - name: stage each planned package on npm and record its ID
         id: stage
-        env:
-          PACKAGES: ${{ needs.plan.outputs.packages }}
-          APPROVAL_ENVIRONMENT: ${{ inputs.approval-environment }}
-        run: |
-          set -euo pipefail
-          registry=https://registry.npmjs.org
-          staged='[]'
-
-          # List the stages that this run cannot finalize, so nobody approves them on npm.
-          fail() {
-            printf '::error::%s\n' "$1"
-            if [[ "$(jq length <<< "$staged")" != 0 ]]; then
-              {
-                printf '## Staged before the failure\n\n'
-                printf 'Do not approve these stages on npm. This run cannot finalize them.\n\n'
-                jq -r '.[] | "- `\(.name)@\(.version)`: stage ID \(."stage-id")"' <<< "$staged"
-              } >> "$GITHUB_STEP_SUMMARY"
-            fi
-            exit 1
-          }
-
-          if ! jq -e 'type == "array" and length > 0' <<< "$PACKAGES" > /dev/null; then
-            fail 'The plan job did not pass a list of packages to stage.'
-          fi
-          while IFS= read -r package; do
-            name=$(jq -r '.name' <<< "$package")
-            version=$(jq -r '.version' <<< "$package")
-            directory=$(jq -r '.directory' <<< "$package")
-            npm_package_path=$(jq -r '."npm-package-path"' <<< "$package")
-            dist_tag=$(jq -r '."dist-tag"' <<< "$package")
-            if ! status=$(curl --silent --show-error --max-time 15 --header 'Cache-Control: no-cache' \
-              --output /dev/null --write-out '%{http_code}' "$registry/$npm_package_path/$version"); then
-              fail "Could not check npm for $name@$version. See the curl error above."
-            fi
-            if [[ "$status" != 404 ]]; then
-              fail "Expected npm to return 404 for $name@$version before staging. Got HTTP $status."
-            fi
-            # Stage from the package directory, so each package gets its own dist-tag.
-            if ! stage_result=$(cd "$directory" && pnpm stage publish --registry "$registry/" --npmrc-auth-file /dev/null \
-              --access public --no-git-checks --tag "$dist_tag" --provenance --use-stderr --json); then
-              # Some pnpm versions report failures as JSON on stdout instead of stderr.
-              jq -c '.error // empty' <<< "$stage_result" >&2 || true
-              fail "npm staging failed for $name@$version. Inspect npm before trying again."
-            fi
-            if ! stage_id=$(jq -er --arg name "$name" '.[$name].stageId | strings | select(test("^[A-Za-z0-9_-]+$"))' <<< "$stage_result") ||
-               ! integrity=$(jq -er --arg name "$name" '.[$name].integrity | strings | select(test("^sha512-[A-Za-z0-9+/]{86}==$"))' <<< "$stage_result"); then
-              fail "pnpm did not return a stage ID and a tarball digest for $name@$version. Inspect npm before trying again."
-            fi
-            staged=$(jq -c --argjson package "$package" --arg stage_id "$stage_id" --arg integrity "$integrity" \
-              '. + [$package + {"stage-id": $stage_id, integrity: $integrity}]' <<< "$staged")
-            printf 'Staged %s@%s with ID %s\n' "$name" "$version" "$stage_id"
-          done < <(jq -c '.[]' <<< "$PACKAGES")
-
-          printf 'packages=%s\n' "$staged" >> "$GITHUB_OUTPUT"
-          printf 'invocation-id=%s/%s/actions/runs/%s/attempts/%s\n' \
-            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
-          {
-            printf '## Ready for npm approval\n\n'
-            printf 'Approve each stage ID on its package page under **Staged Packages** with npm 2FA, in this order:\n\n'
-            jq -r '.[] | "- [`\(.name)@\(.version)`](https://www.npmjs.com/package/\(.name)): stage ID \(."stage-id")"' <<< "$staged"
-            printf '\nThen approve the pending %s environment in this run.\n' "$APPROVAL_ENVIRONMENT"
-            printf 'The Git tags and GitHub releases wait until npm serves each package from this run.\n'
-          } >> "$GITHUB_STEP_SUMMARY"
+        uses: $/actions/stage-npm-packages
+        with:
+          packages: ${{ needs.plan.outputs.packages }}
+          approval-environment: ${{ inputs.approval-environment }}
 
   prepare-release:
     needs: stage
@@ -279,99 +220,10 @@ jobs:
     steps:
       - name: wait for the packages from this staging run
         id: verify
-        env:
-          PACKAGES: ${{ needs.stage.outputs.packages }}
-          STAGING_INVOCATION_ID: ${{ needs.stage.outputs.invocation-id }}
-        run: |
-          set -euo pipefail
-          registry=https://registry.npmjs.org
-          repository="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
-          provenance=https://slsa.dev/provenance/v1
-          npm_responses=$(mktemp -d "$RUNNER_TEMP/npm-release.XXXXXX")
-          trap 'rm -rf -- "$npm_responses"' EXIT
-
-          fetch_npm_release_data() {
-            local label=$1 url=$2 output=$3 status
-            if ! status=$(curl --silent --show-error --max-time 10 --header 'Cache-Control: no-cache' \
-              --output "$output" --write-out '%{http_code}' "$url"); then
-              printf 'Could not fetch %s from npm. See the curl error above.\n' "$label"
-              return 1
-            fi
-            case "$status" in
-              200) return 0 ;;
-              404) printf 'npm does not serve %s yet (HTTP 404).\n' "$label" ;;
-              *) printf 'npm returned HTTP %s for %s.\n' "$status" "$label" ;;
-            esac
-            return 1
-          }
-
-          # Read the npm-hosted attestation, and bind its claims to the published tarball.
-          verify_npm_artifact() {
-            local name=$1 version=$2 npm_package_path=$3 staged_integrity=$4
-            local manifest="$npm_responses/manifest.json" attestations="$npm_responses/attestations.json"
-            local integrity digest
-            fetch_npm_release_data "$name@$version" "$registry/$npm_package_path/$version" "$manifest" || return 1
-            if ! integrity=$(jq -er --arg name "$name" --arg version "$version" --arg staged "$staged_integrity" '
-              select(.name == $name and .version == $version and (.dist.tarball | type == "string"))
-              | .dist.integrity | select(. == $staged) | strings | capture("^sha512-(?<base64>[A-Za-z0-9+/]{86}==)$").base64
-            ' "$manifest"); then
-              printf 'The published metadata of %s@%s does not match the staged package and tarball digest.\n' "$name" "$version"
-              return 1
-            fi
-            digest=$(printf '%s' "$integrity" | base64 -d | od -An -v -tx1 | tr -d '[:space:]') || return 1
-            fetch_npm_release_data "the provenance attestation of $name@$version" \
-              "$registry/-/npm/v1/attestations/$npm_package_path@$version" "$attestations" || return 1
-            if ! jq -e --arg provenance "$provenance" --arg digest "$digest" \
-                --arg repository "$repository" --arg ref "$GITHUB_REF" --arg sha "$GITHUB_SHA" \
-                --arg invocation "$STAGING_INVOCATION_ID" '
-                any(.attestations[]?;
-                  .predicateType == $provenance and (
-                    .bundle.dsseEnvelope.payload | @base64d | fromjson
-                    | .predicateType == $provenance
-                    and any(.subject[]?; .digest.sha512 == $digest)
-                    and (.predicate.runDetails.metadata.invocationId == $invocation)
-                    and (.predicate.buildDefinition as $build |
-                      $build.externalParameters.workflow.repository == $repository
-                      and $build.externalParameters.workflow.ref == $ref
-                      and any($build.resolvedDependencies[]?;
-                        .uri == ("git+" + $repository + "@" + $ref) and .digest.gitCommit == $sha))
-                  ))' "$attestations" > /dev/null; then
-              printf 'The npm provenance of %s@%s does not match the staged tarball, workflow run attempt, and commit.\n' "$name" "$version"
-              return 1
-            fi
-          }
-
-          if ! jq -e 'type == "array" and length > 0' <<< "$PACKAGES" > /dev/null; then
-            echo '::error::The stage job did not pass a list of staged packages.'
-            exit 1
-          fi
-          pending=$PACKAGES
-          verified='[]'
-          max_attempts=20
-          retry_seconds=15
-          for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-            remaining='[]'
-            while IFS= read -r package; do
-              name=$(jq -r '.name' <<< "$package")
-              version=$(jq -r '.version' <<< "$package")
-              printf 'Attempt %s/%s: Checking npm for %s@%s.\n' "$attempt" "$max_attempts" "$name" "$version"
-              if verify_npm_artifact "$name" "$version" "$(jq -r '."npm-package-path"' <<< "$package")" "$(jq -r '.integrity' <<< "$package")"; then
-                printf 'Verified the published tarball and provenance of %s@%s.\n' "$name" "$version"
-                verified=$(jq -c --argjson package "$package" '. + [$package]' <<< "$verified")
-              else
-                remaining=$(jq -c --argjson package "$package" '. + [$package]' <<< "$remaining")
-              fi
-            done < <(jq -c '.[]' <<< "$pending")
-            pending=$remaining
-            if [[ "$pending" == '[]' ]]; then
-              break
-            fi
-            if (( attempt < max_attempts )); then
-              printf 'Retrying %s package(s) in %s seconds.\n' "$(jq length <<< "$pending")" "$retry_seconds"
-              sleep "$retry_seconds"
-            fi
-          done
-          printf 'verified=%s\nmissing=%s\n' "$verified" "$pending" >> "$GITHUB_OUTPUT"
+        uses: $/actions/verify-npm-packages
+        with:
+          packages: ${{ needs.stage.outputs.packages }}
+          invocation-id: ${{ needs.stage.outputs.invocation-id }}
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -442,45 +294,6 @@ jobs:
       contents: write
     steps:
       - name: create a tag and GitHub release for each verified package
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ENCODED_RELEASES: ${{ needs.prepare-release.outputs.releases }}
-        run: |
-          set -euo pipefail
-          releases_file="$RUNNER_TEMP/releases.json"
-          notes_file="$RUNNER_TEMP/release-notes.md"
-          if ! printf '%s' "$ENCODED_RELEASES" | base64 -d > "$releases_file" ||
-             ! jq -e 'type == "array" and length > 0' "$releases_file" > /dev/null; then
-            echo '::error::The release notes from the prepare-release job are missing or malformed. Do not create releases without them.'
-            exit 1
-          fi
-          existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100")
-          failed=0
-          while IFS= read -r release; do
-            tag=$(jq -r '.tag' <<< "$release")
-            version=$(jq -r '.version' <<< "$release")
-            jq -r '.notes' <<< "$release" > "$notes_file"
-            if jq -es --arg tag "$tag" 'any(.[][]; .tag_name == $tag and .draft)' <<< "$existing" > /dev/null; then
-              echo "::error::A draft GitHub release already exists for $tag. Review it before rerunning failed jobs."
-              failed=1
-              continue
-            fi
-            ref_endpoint="repos/$GITHUB_REPOSITORY/git/ref/tags/$tag"
-            if ! ref=$(gh api "$ref_endpoint"); then
-              gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA" > /dev/null
-              ref=$(gh api "$ref_endpoint")
-            fi
-            if ! jq -e --arg sha "$GITHUB_SHA" '.object.type == "commit" and .object.sha == $sha' <<< "$ref" > /dev/null; then
-              echo "::error::Tag $tag is not a lightweight tag at the release commit."
-              failed=1
-              continue
-            fi
-            if jq -es --arg tag "$tag" 'any(.[][]; .tag_name == $tag and (.draft | not))' <<< "$existing" > /dev/null; then
-              echo "GitHub release $tag already exists."
-              continue
-            fi
-            args=(--verify-tag --title "$tag" --notes-file "$notes_file")
-            if [[ "$version" == *-* ]]; then args+=(--prerelease --latest=false); fi
-            gh release create "$tag" --repo "$GITHUB_REPOSITORY" "${args[@]}"
-          done < <(jq -c '.[]' "$releases_file")
-          exit "$failed"
+        uses: $/actions/create-github-releases
+        with:
+          releases: ${{ needs.prepare-release.outputs.releases }}
