@@ -284,6 +284,14 @@ jobs:
             existing-tags: '{"@scope/a@1.0.0":"current","@scope/b@2.0.0-beta.1":"current","v3.0.0":"current"}'
             created: '[]'
             outcome: success
+          # The releases exist, but the release list does not show them yet, as on a quick rerun.
+          - case: skip a release that the list does not show yet
+            input: three
+            existing-releases: '[]'
+            unlisted-releases: '[{"tag_name":"@scope/a@1.0.0","draft":false},{"tag_name":"@scope/b@2.0.0-beta.1","draft":false},{"tag_name":"v3.0.0","draft":false}]'
+            existing-tags: '{"@scope/a@1.0.0":"current","@scope/b@2.0.0-beta.1":"current","v3.0.0":"current"}'
+            created: '[]'
+            outcome: success
           - case: continue past a draft and a tag at another commit
             input: three
             existing-releases: '[{"tag_name":"@scope/a@1.0.0","draft":true}]'
@@ -309,12 +317,14 @@ jobs:
         env:
           INPUT: ${{ matrix.input }}
           EXISTING_RELEASES: ${{ matrix.existing-releases }}
+          UNLISTED_RELEASES: ${{ matrix.unlisted-releases || '[]' }}
           EXISTING_TAGS: ${{ matrix.existing-tags }}
         run: |
           set -euo pipefail
           state="$RUNNER_TEMP/gh"
           mkdir -p "$state" "$RUNNER_TEMP/fake-bin"
           printf '%s' "$EXISTING_RELEASES" > "$state/releases.json"
+          printf '%s' "$UNLISTED_RELEASES" > "$state/unlisted.json"
           jq --arg sha "$GITHUB_SHA" 'map_values(if . == "current" then $sha else . end)' <<< "$EXISTING_TAGS" > "$state/tags.json"
           echo '{}' > "$state/created-tags.json"
           echo '[]' > "$state/created-releases.json"
@@ -336,20 +346,26 @@ jobs:
             update tags.json --arg tag "$tag" --arg sha "$sha" '. + {($tag): $sha}'
             update created-tags.json --arg tag "$tag" --arg sha "$sha" '. + {($tag): $sha}'
             echo '{}'
-          elif [[ "$1 $2" == 'release create' ]]; then
-            tag=$3 prerelease=false latest=true notes=''
-            shift 3
-            while (( $# > 0 )); do
-              case "$1" in
-                --prerelease) prerelease=true ;;
-                --latest=false) latest=false ;;
-                --notes-file) notes=$(cat "$2"); shift ;;
-              esac
-              shift
-            done
+          elif [[ "$1" == api && "$2" == */releases/tags/* ]]; then
+            # Like the REST API, this finds a published release by tag, even one that the list does not show yet.
+            [[ "$3 $4" == '--jq .draft == false' ]] || { echo "fake gh: unexpected arguments: $*" >&2; exit 2; }
+            jq -es --arg tag "${2#*/releases/tags/}" 'add | any(.[]; .tag_name == $tag and (.draft | not))' \
+              "$state/releases.json" "$state/unlisted.json" > /dev/null || { echo 'gh: Not Found (HTTP 404)' >&2; exit 1; }
+            echo true
+          elif [[ "$1" == api && "$2" == */releases && "$3 $4 $5 $6" == '--method POST --input -' ]]; then
+            payload=$(cat)
+            tag=$(jq -r '.tag_name' <<< "$payload")
+            if jq -es --arg tag "$tag" 'add | any(.[]; .tag_name == $tag)' "$state/releases.json" "$state/unlisted.json" > /dev/null; then
+              echo '{"message":"Validation Failed","errors":[{"resource":"Release","code":"already_exists","field":"tag_name"}]}'
+              echo 'gh: Validation Failed (HTTP 422)' >&2
+              exit 1
+            fi
+            jq -e --arg sha "$GITHUB_SHA" '.target_commitish == $sha and .name == .tag_name and .draft == false' <<< "$payload" > /dev/null ||
+              { echo "fake gh: unexpected release payload: $payload" >&2; exit 3; }
             update releases.json --arg tag "$tag" '. + [{tag_name: $tag, draft: false}]'
-            update created-releases.json --arg tag "$tag" --argjson prerelease "$prerelease" --argjson latest "$latest" --arg notes "$notes" \
-              '. + [{tag: $tag, prerelease: $prerelease, latest: $latest, notes: $notes}]'
+            update created-releases.json --argjson release "$payload" \
+              '. + [{tag: $release.tag_name, prerelease: $release.prerelease, latest: ($release.make_latest != "false"), notes: $release.body}]'
+            jq -n --arg tag "$tag" '{html_url: ("https://github.com/fake/releases/tag/" + $tag)}'
           else
             echo "fake gh: unexpected call: $*" >&2
             exit 2
