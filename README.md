@@ -24,6 +24,9 @@ Each reusable workflow has its own documentation with inputs, secrets, permissio
 | [actions/setup](actions/setup/action.yaml) | Checks out the repository, sets up pnpm and Node.js, and installs dependencies. |
 | [actions/run-pnpm](actions/run-pnpm/action.yaml) | Runs pnpm with caller-provided arguments without shell re-interpretation. |
 | [actions/release-notes](actions/release-notes/README.md) | Writes release notes from Conventional Commits without installing packages. |
+| [actions/stage-npm-packages](actions/stage-npm-packages/README.md) | Stages npm packages with provenance and records each stage ID and tarball digest. |
+| [actions/verify-npm-packages](actions/verify-npm-packages/README.md) | Waits until npm serves staged packages, and checks their tarball digests and provenance. |
+| [actions/create-github-releases](actions/create-github-releases/README.md) | Creates a tag and a GitHub release for each verified package. |
 
 ## How To Use A Shared Workflow
 

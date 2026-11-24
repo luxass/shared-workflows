@@ -1,0 +1,154 @@
+name: Verify npm Packages
+description: Wait until npm serves staged packages, and check their tarball digests and provenance
+
+inputs:
+  packages:
+    description: >-
+      JSON array of the staged packages. Each entry needs name, version, npm-package-path (the URL-encoded name),
+      and integrity (the staged tarball digest). Other fields pass through to the outputs.
+    required: true
+  invocation-id:
+    description: The workflow run attempt that staged the packages, as recorded in their provenance.
+    required: true
+  max-attempts:
+    description: How many times to check npm before giving up.
+    required: false
+    default: "20"
+  retry-seconds:
+    description: Seconds to wait between checks.
+    required: false
+    default: "15"
+  repository:
+    description: Repository that built the packages. Defaults to the current repository. Override it only in tests.
+    required: false
+    default: ${{ github.repository }}
+  ref:
+    description: Git ref that built the packages. Defaults to the current ref. Override it only in tests.
+    required: false
+    default: ${{ github.ref }}
+  sha:
+    description: Commit that built the packages. Defaults to the current commit. Override it only in tests.
+    required: false
+    default: ${{ github.sha }}
+
+outputs:
+  verified:
+    description: JSON array of the input entries that npm serves with matching provenance.
+    value: ${{ steps.verify.outputs.verified }}
+  missing:
+    description: JSON array of the input entries that npm does not serve, or serves without matching provenance.
+    value: ${{ steps.verify.outputs.missing }}
+
+runs:
+  using: composite
+  steps:
+    - name: wait for the packages from the staging run
+      id: verify
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+        STAGING_INVOCATION_ID: ${{ inputs.invocation-id }}
+        MAX_ATTEMPTS: ${{ inputs.max-attempts }}
+        RETRY_SECONDS: ${{ inputs.retry-seconds }}
+        REPOSITORY: ${{ inputs.repository }}
+        RELEASE_REF: ${{ inputs.ref }}
+        RELEASE_SHA: ${{ inputs.sha }}
+      run: |
+        set -euo pipefail
+        if [[ ! "$MAX_ATTEMPTS" =~ ^[1-9][0-9]*$ || ! "$RETRY_SECONDS" =~ ^[0-9]+$ ]]; then
+          echo '::error::Expected max-attempts to be a positive integer and retry-seconds to be zero or a positive integer.'
+          exit 1
+        fi
+        if [[ ! "$REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ || "$RELEASE_REF" != refs/* ||
+              ! "$RELEASE_SHA" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ || "$STAGING_INVOCATION_ID" != https://* ]]; then
+          echo '::error::Expected a repository, a Git ref, a full commit SHA, and the staging invocation ID.'
+          exit 1
+        fi
+        registry=https://registry.npmjs.org
+        repository="$GITHUB_SERVER_URL/$REPOSITORY"
+        provenance=https://slsa.dev/provenance/v1
+        npm_responses=$(mktemp -d "$RUNNER_TEMP/npm-release.XXXXXX")
+        trap 'rm -rf -- "$npm_responses"' EXIT
+
+        fetch_npm_release_data() {
+          local label=$1 url=$2 output=$3 status
+          if ! status=$(curl --silent --show-error --max-time 10 --header 'Cache-Control: no-cache' \
+            --output "$output" --write-out '%{http_code}' "$url"); then
+            printf 'Could not fetch %s from npm. See the curl error above.\n' "$label"
+            return 1
+          fi
+          case "$status" in
+            200) return 0 ;;
+            404) printf 'npm does not serve %s yet (HTTP 404).\n' "$label" ;;
+            *) printf 'npm returned HTTP %s for %s.\n' "$status" "$label" ;;
+          esac
+          return 1
+        }
+
+        # Read the npm-hosted attestation, and bind its claims to the published tarball.
+        verify_npm_artifact() {
+          local name=$1 version=$2 npm_package_path=$3 staged_integrity=$4
+          local manifest="$npm_responses/manifest.json" attestations="$npm_responses/attestations.json"
+          local integrity digest
+          fetch_npm_release_data "$name@$version" "$registry/$npm_package_path/$version" "$manifest" || return 1
+          if ! integrity=$(jq -er --arg name "$name" --arg version "$version" --arg staged "$staged_integrity" '
+            select(.name == $name and .version == $version and (.dist.tarball | type == "string"))
+            | .dist.integrity | select(. == $staged) | strings | capture("^sha512-(?<base64>[A-Za-z0-9+/]{86}==)$").base64
+          ' "$manifest"); then
+            printf 'The published metadata of %s@%s does not match the staged package and tarball digest.\n' "$name" "$version"
+            return 1
+          fi
+          digest=$(printf '%s' "$integrity" | base64 -d | od -An -v -tx1 | tr -d '[:space:]') || return 1
+          fetch_npm_release_data "the provenance attestation of $name@$version" \
+            "$registry/-/npm/v1/attestations/$npm_package_path@$version" "$attestations" || return 1
+          if ! jq -e --arg provenance "$provenance" --arg digest "$digest" \
+              --arg repository "$repository" --arg ref "$RELEASE_REF" --arg sha "$RELEASE_SHA" \
+              --arg invocation "$STAGING_INVOCATION_ID" '
+              any(.attestations[]?;
+                .predicateType == $provenance and (
+                  .bundle.dsseEnvelope.payload | @base64d | fromjson
+                  | .predicateType == $provenance
+                  and any(.subject[]?; .digest.sha512 == $digest)
+                  and (.predicate.runDetails.metadata.invocationId == $invocation)
+                  and (.predicate.buildDefinition as $build |
+                    $build.externalParameters.workflow.repository == $repository
+                    and $build.externalParameters.workflow.ref == $ref
+                    and any($build.resolvedDependencies[]?;
+                      .uri == ("git+" + $repository + "@" + $ref) and .digest.gitCommit == $sha))
+                ))' "$attestations" > /dev/null; then
+            printf 'The npm provenance of %s@%s does not match the staged tarball, workflow run attempt, and commit.\n' "$name" "$version"
+            return 1
+          fi
+        }
+
+        if ! jq -e 'type == "array" and length > 0' <<< "$PACKAGES" > /dev/null; then
+          echo '::error::Expected a JSON list of staged packages to verify.'
+          exit 1
+        fi
+        pending=$PACKAGES
+        verified='[]'
+        max_attempts=$MAX_ATTEMPTS
+        retry_seconds=$RETRY_SECONDS
+        for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+          remaining='[]'
+          while IFS= read -r package; do
+            name=$(jq -r '.name' <<< "$package")
+            version=$(jq -r '.version' <<< "$package")
+            printf 'Attempt %s/%s: Checking npm for %s@%s.\n' "$attempt" "$max_attempts" "$name" "$version"
+            if verify_npm_artifact "$name" "$version" "$(jq -r '."npm-package-path"' <<< "$package")" "$(jq -r '.integrity' <<< "$package")"; then
+              printf 'Verified the published tarball and provenance of %s@%s.\n' "$name" "$version"
+              verified=$(jq -c --argjson package "$package" '. + [$package]' <<< "$verified")
+            else
+              remaining=$(jq -c --argjson package "$package" '. + [$package]' <<< "$remaining")
+            fi
+          done < <(jq -c '.[]' <<< "$pending")
+          pending=$remaining
+          if [[ "$pending" == '[]' ]]; then
+            break
+          fi
+          if (( attempt < max_attempts )); then
+            printf 'Retrying %s package(s) in %s seconds.\n' "$(jq length <<< "$pending")" "$retry_seconds"
+            sleep "$retry_seconds"
+          fi
+        done
+        printf 'verified=%s\nmissing=%s\n' "$verified" "$pending" >> "$GITHUB_OUTPUT"

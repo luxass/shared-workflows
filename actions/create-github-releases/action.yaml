@@ -1,0 +1,60 @@
+name: Create GitHub Releases
+description: Create a lightweight tag at the current commit and a GitHub release for each verified package
+
+inputs:
+  releases:
+    description: >-
+      Base64-encoded JSON array of the releases. Each entry needs tag, version, and notes (Markdown).
+    required: true
+  github-token:
+    description: Token with contents write access. Defaults to the job token.
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: create a tag and GitHub release for each verified package
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        ENCODED_RELEASES: ${{ inputs.releases }}
+      run: |
+        set -euo pipefail
+        releases_file="$RUNNER_TEMP/releases.json"
+        notes_file="$RUNNER_TEMP/release-notes.md"
+        if ! printf '%s' "$ENCODED_RELEASES" | base64 -d > "$releases_file" ||
+           ! jq -e 'type == "array" and length > 0' "$releases_file" > /dev/null; then
+          echo '::error::The release data is missing or malformed. Do not create releases without it.'
+          exit 1
+        fi
+        existing=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100")
+        failed=0
+        while IFS= read -r release; do
+          tag=$(jq -r '.tag' <<< "$release")
+          version=$(jq -r '.version' <<< "$release")
+          jq -r '.notes' <<< "$release" > "$notes_file"
+          if jq -es --arg tag "$tag" 'any(.[][]; .tag_name == $tag and .draft)' <<< "$existing" > /dev/null; then
+            echo "::error::A draft GitHub release already exists for $tag. Review it before rerunning failed jobs."
+            failed=1
+            continue
+          fi
+          ref_endpoint="repos/$GITHUB_REPOSITORY/git/ref/tags/$tag"
+          if ! ref=$(gh api "$ref_endpoint"); then
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA" > /dev/null
+            ref=$(gh api "$ref_endpoint")
+          fi
+          if ! jq -e --arg sha "$GITHUB_SHA" '.object.type == "commit" and .object.sha == $sha' <<< "$ref" > /dev/null; then
+            echo "::error::Tag $tag is not a lightweight tag at the release commit."
+            failed=1
+            continue
+          fi
+          if jq -es --arg tag "$tag" 'any(.[][]; .tag_name == $tag and (.draft | not))' <<< "$existing" > /dev/null; then
+            echo "GitHub release $tag already exists."
+            continue
+          fi
+          args=(--verify-tag --title "$tag" --notes-file "$notes_file")
+          if [[ "$version" == *-* ]]; then args+=(--prerelease --latest=false); fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" "${args[@]}"
+        done < <(jq -c '.[]' "$releases_file")
+        exit "$failed"
