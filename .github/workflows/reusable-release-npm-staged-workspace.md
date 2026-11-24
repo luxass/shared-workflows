@@ -53,12 +53,12 @@ Grant the caller job `contents: write` and `id-token: write`. The plan and stagi
 ## Jobs
 
 1. `validate` requires a push or dispatch on the default branch and a public repository. If the caller provides `expected-sha`, the run must target that exact commit.
-2. `plan` lists the public workspace packages with `pnpm --recursive list`, without installing dependencies. It rejects packages with a publish directory or registry override. It plans each version that npm does not serve.
+2. `plan` lists the public workspace packages with `pnpm --recursive list`, without installing dependencies. It rejects packages with a publish directory or registry override. It plans each version that npm does not serve, and puts each package after the planned packages that it depends on.
 3. `stage` waits for a reviewer in the staging environment. It installs dependencies, optionally builds, and checks again that npm does not serve each planned version. It stages each package from its own directory with provenance. It uses `latest` for stable versions and `next` for prereleases. The job summary lists each stage ID to approve on npm with 2FA.
 4. `prepare-release` waits for a reviewer in the approval environment. For each staged package, it compares the staged and published tarball digests. It also checks that npm's provenance matches that digest, the staging run attempt, and the release commit. It then reads the `## <version>` section of the package's `CHANGELOG.md` as the release notes. If that section does not exist, the notes link to the changelog.
 5. `publish-release` creates a lightweight tag at the release commit for each verified package, and publishes its notes. It marks prereleases as prereleases that are not the latest release. It skips a package that already has a GitHub release. It reports an error for a package whose tag points elsewhere or that has a draft release, and continues with the other packages.
 
-A staging approval covers the whole batch, but npm requires a separate approval with 2FA for each staged package. Approve the packages on npm before you approve the approval environment in the run.
+A staging approval covers the whole batch, but npm requires a separate approval with 2FA for each staged package. Approve the packages on npm in the order of the job summary, so no package becomes public before its workspace dependencies. Then approve the approval environment in the run.
 
 The polling log shows each attempt and what npm has not served or what did not match. If npm does not serve every staged package when polling ends, `prepare-release` fails, and `publish-release` releases the packages that npm already serves. Approve the remaining stages on npm, and choose **Re-run failed jobs** in the same run. The rerun verifies the remaining packages and skips the packages that already have a release. Do not choose **Re-run all jobs** or start a new run to finalize a staged version.
 

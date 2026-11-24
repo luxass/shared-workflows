@@ -127,6 +127,35 @@ jobs:
                 ;;
             esac
           done < <(jq -c '.[] | select(.private != true and .name != null and .version != null)' <<< "$projects")
+          # Put each package after the planned packages it depends on, so approving them in order on npm
+          # never makes a package public before its workspace dependencies.
+          # shellcheck disable=SC2016 # The JavaScript template literal must not expand in the shell.
+          packages=$(PACKAGES="$packages" node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const packages = JSON.parse(process.env.PACKAGES);
+            const planned = new Set(packages.map((entry) => entry.name));
+            const dependencies = new Map(packages.map((entry) => {
+              const manifest = JSON.parse(readFileSync(`${entry.directory}/package.json`, "utf8"));
+              const names = ["dependencies", "optionalDependencies", "peerDependencies"]
+                .flatMap((field) => Object.keys(manifest[field] ?? {}))
+                .filter((name) => planned.has(name) && name !== entry.name);
+              return [entry.name, names];
+            }));
+            const ordered = [];
+            const placed = new Set();
+            while (ordered.length < packages.length) {
+              const next = packages.find((entry) =>
+                !placed.has(entry.name) && dependencies.get(entry.name).every((name) => placed.has(name)));
+              if (!next) {
+                console.error("::warning::The planned packages depend on each other in a cycle. Keeping the listed order for the rest.");
+                ordered.push(...packages.filter((entry) => !placed.has(entry.name)));
+                break;
+              }
+              ordered.push(next);
+              placed.add(next.name);
+            }
+            process.stdout.write(JSON.stringify(ordered));
+          ')
           count=$(jq length <<< "$packages")
           if (( count == 0 )); then
             echo 'npm already serves every public workspace package version. Nothing to stage.' >> "$GITHUB_STEP_SUMMARY"
@@ -232,7 +261,7 @@ jobs:
             "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
           {
             printf '## Ready for npm approval\n\n'
-            printf 'Approve each stage ID on its package page under **Staged Packages** with npm 2FA:\n\n'
+            printf 'Approve each stage ID on its package page under **Staged Packages** with npm 2FA, in this order:\n\n'
             jq -r '.[] | "- [`\(.name)@\(.version)`](https://www.npmjs.com/package/\(.name)): stage ID \(."stage-id")"' <<< "$staged"
             printf '\nThen approve the pending %s environment in this run.\n' "$APPROVAL_ENVIRONMENT"
             printf 'The Git tags and GitHub releases wait until npm serves each package from this run.\n'
