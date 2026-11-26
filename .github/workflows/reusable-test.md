@@ -43,24 +43,33 @@ jobs:
       install-args: "--prefer-offline"
 ```
 
-## With OS Matrix
+## With OS and Node.js Matrix
 
-Run tests across operating systems by fanning out with a matrix and passing each runner through:
+Pass JSON lists to run every combination of runner and Node.js version:
 
 ```yaml
 jobs:
   test:
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
     uses: luxass/shared-workflows/.github/workflows/reusable-test.yaml@v0.11.2
     with:
-      runs-on: ${{ matrix.os }}
+      os: '["ubuntu-latest", "macos-latest", "windows-latest"]'
+      node-versions: '["24", "26"]'
       pre-test-script: "build"
 ```
+
+Each combination runs as its own job, and a failing combination does not cancel the others.
+
+## Requiring Tests in a Ruleset
+
+The `result` job reports one check that passes only when every test job passed. Require that check instead of the individual matrix jobs, whose names change with the matrix:
+
+```text
+test / result
+```
+
+The first part is the name of the calling job, so a calling job named `test` reports `test / result`.
 
 ## With Pre/Post Test Commands
 
@@ -84,6 +93,8 @@ jobs:
 | --- | --- | --- | --- |
 | `runs-on` | `string` | `ubuntu-latest` | Runner to use for the job (e.g. `ubuntu-latest`, `macos-latest`, `windows-latest`). |
 | `node-version` | `string` | `lts/*` | Node.js version to use. |
+| `os` | `string` | `""` | JSON list of runners to test on, such as `["ubuntu-latest", "windows-latest"]`. Defaults to `runs-on`. |
+| `node-versions` | `string` | `""` | JSON list of Node.js versions to test with, such as `["24", "26"]`. Defaults to `node-version`. |
 | `persist-credentials` | `boolean` | `false` | Whether checkout should persist git credentials. |
 | `fetch-depth` | `number` | `1` | Number of commits to fetch. Use `0` for full history. |
 | `submodules` | `string` | `false` | Whether to checkout submodules. Use `true` or `recursive`. |
@@ -115,6 +126,9 @@ The caller job should grant `contents: read` because the reusable workflow check
 
 | Job | Description |
 | --- | --- |
-| `test` | Runs setup, optionally runs the configured pre-test command, runs the configured `pnpm` test command, then optionally runs the configured post-test command. |
+| `test` | Runs once per runner and Node.js version. Each run sets up the project, optionally runs the configured pre-test command, runs the configured `pnpm` test command, then optionally runs the configured post-test command. |
+| `result` | Always runs after the `test` jobs and fails unless all of them succeeded. Use its check, `<calling job> / result`, as the required check. |
+
+Test jobs are named `test (<runner>, node <version>)`.
 
 The pre-test, test, and post-test script inputs are passed to `pnpm` through `actions/run-pnpm` without shell re-interpretation.

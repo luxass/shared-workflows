@@ -13,6 +13,16 @@ on:
         type: string
         default: "lts/*"
         required: false
+      os:
+        description: "JSON list of runners to test on, such as [\"ubuntu-latest\", \"windows-latest\"]. Defaults to runs-on."
+        type: string
+        default: ""
+        required: false
+      node-versions:
+        description: "JSON list of Node.js versions to test with, such as [\"24\", \"26\"]. Defaults to node-version."
+        type: string
+        default: ""
+        required: false
       persist-credentials:
         description: "Whether to persist git credentials after checkout"
         type: boolean
@@ -72,14 +82,20 @@ permissions: {}
 
 jobs:
   test:
-    runs-on: ${{ inputs.runs-on }}
+    name: test (${{ matrix.os }}, node ${{ matrix.node-version }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.os || format('["{0}"]', inputs.runs-on)) }}
+        node-version: ${{ fromJSON(inputs.node-versions || format('["{0}"]', inputs.node-version)) }}
     steps:
       - name: setup
         uses: luxass/shared-workflows/actions/setup@8e84402c426badbcb2e7db5a88fd69eb41b5313f # actions/setup/v0.1.6
         with:
-          node-version: ${{ inputs.node-version }}
+          node-version: ${{ matrix.node-version }}
           node-version-file: ${{ inputs.node-version-file }}
           registry-url: ${{ inputs.registry-url }}
           scope: ${{ inputs.scope }}
@@ -105,3 +121,21 @@ jobs:
         uses: luxass/shared-workflows/actions/run-pnpm@82c9e3625f7959ea6b3ddd2014a8a095a269e8f7 # actions/run-pnpm/v0.2.1
         with:
           args: ${{ inputs.post-test-script }}
+
+  # One check that always reports, so callers can require test / result
+  # without listing every matrix entry.
+  result:
+    name: result
+    if: ${{ always() }}
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: check test results
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          set -euo pipefail
+          if [ "$TEST_RESULT" != "success" ]; then
+            echo "::error::Tests finished with result: $TEST_RESULT"
+            exit 1
+          fi
